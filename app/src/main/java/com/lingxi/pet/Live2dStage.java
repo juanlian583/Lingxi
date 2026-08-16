@@ -103,9 +103,10 @@ public class Live2dStage extends BaseOverlay implements PetHost {
 
     /** 内置模型路径（相对本地服务器根） */
     protected String builtinModelPath() {
-        return PetConfig.MODEL_BAIXI.equals(PetConfig.live2dModel(getContext()))
-                ? "Baixi/baixifree.model3.json"
-                : "Haru/Haru.model3.json";
+        String m = PetConfig.live2dModel(getContext());
+        if (PetConfig.MODEL_BAIXI.equals(m)) return "Baixi/baixifree.model3.json";
+        if (PetConfig.MODEL_NOIR.equals(m)) return "Noir/noir.model3.json";
+        return "Haru/Haru.model3.json";
     }
 
     protected void loadPage() {

@@ -68,6 +68,30 @@
         } catch (e) { return false; }
     }
 
+    /* 按名称关键词设置表情（无匹配则忽略），支持 NOIR 的 eyeclose/quanquan/tears/white */
+    function setExpression(nameLike) {
+        if (!model) return;
+        try {
+            var defs = model.internalModel.expressionManager.definitions;
+            if (!defs || !defs.length) return;
+            for (var i = 0; i < defs.length; i++) {
+                var n = ((defs[i].Name || '') + ' ' + (defs[i].File || ''));
+                if (n.indexOf(nameLike) >= 0) {
+                    model.expression(defs[i].Name);
+                    return;
+                }
+            }
+        } catch (e) {}
+    }
+
+    function resetExpressionSoon(ms) {
+        try {
+            setTimeout(function () {
+                try { model.resetExpression(); } catch (e) {}
+            }, ms || 1600);
+        } catch (e) {}
+    }
+
     // 歪头打招呼
     function procTap() {
         animParam('ParamAngleZ', 0, 18, 220);
@@ -228,6 +252,8 @@
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('TapBody'); });
             else procTap();
+            setExpression('quanquan');
+            resetExpressionSoon();
         },
         pat: function () {
             if (!model || !ready) return;
@@ -239,11 +265,15 @@
             } else {
                 procPat();
             }
+            setExpression('eyeclose');
+            resetExpressionSoon();
         },
         think: function () {
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('Idle'); });
             else procThink();
+            setExpression('quanquan');
+            resetExpressionSoon(4500);
         },
         reply: function (ok) {
             if (!model || !ready) return;
@@ -255,6 +285,8 @@
             } else {
                 procReply(ok);
             }
+            setExpression(ok ? 'eyeclose' : 'tears');
+            resetExpressionSoon();
         }
     };
 

@@ -72,6 +72,7 @@ public final class PetConfig {
     /** 内置 Live2D 模型选择：haru（默认）/ baixi（白兮 VTS） */
     public static final String MODEL_HARU = "haru";
     public static final String MODEL_BAIXI = "baixi";
+    public static final String MODEL_NOIR = "noir";
     public static String live2dModel(Context c) { return sp(c).getString("live2d_model", MODEL_HARU); }
     public static void setLive2dModel(Context c, String v) { sp(c).edit().putString("live2d_model", v).apply(); }
 

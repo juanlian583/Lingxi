@@ -116,15 +116,18 @@ public class MainActivity extends Activity {
     private void setupModelSpinner() {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
-                new String[]{"Haru（内置·蓝发少女）", "白兮 Baixi（内置·VTS 模型）"});
+                new String[]{"Haru（内置·蓝发少女）", "白兮 Baixi（内置·VTS）", "NOIR（内置·VTS）"});
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spModel.setAdapter(adapter);
-        spModel.setSelection(PetConfig.MODEL_BAIXI.equals(PetConfig.live2dModel(this)) ? 1 : 0);
+        String cur = PetConfig.live2dModel(this);
+        int sel = PetConfig.MODEL_NOIR.equals(cur) ? 2 : (PetConfig.MODEL_BAIXI.equals(cur) ? 1 : 0);
+        spModel.setSelection(sel);
         final boolean[] ready = {false};
         spModel.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 if (!ready[0]) { ready[0] = true; return; }
-                String m = (position == 1) ? PetConfig.MODEL_BAIXI : PetConfig.MODEL_HARU;
+                String m = position == 2 ? PetConfig.MODEL_NOIR
+                        : (position == 1 ? PetConfig.MODEL_BAIXI : PetConfig.MODEL_HARU);
                 PetConfig.setLive2dModel(MainActivity.this, m);
                 buildPreview();
                 restartPetService();
@@ -248,9 +251,10 @@ public class MainActivity extends Activity {
 
     private void showPetInfo() {
         if (PetConfig.live2dMode(this)) {
-            String modelName = PetConfig.MODEL_BAIXI.equals(PetConfig.live2dModel(this))
-                    ? "白兮 Baixi（VTS 模型）"
-                    : "Haru（Live2D 官方示例·蓝发少女）";
+            String mm = PetConfig.live2dModel(this);
+            String modelName = PetConfig.MODEL_NOIR.equals(mm) ? "NOIR（VTS 模型）"
+                    : (PetConfig.MODEL_BAIXI.equals(mm) ? "白兮 Baixi（VTS 模型）"
+                    : "Haru（Live2D 官方示例·蓝发少女）");
             String custom = PetConfig.live2dModelUrl(this);
             String suffix = custom.isEmpty() ? "" : " · 自定义: " + custom;
             tvPetInfo.setText("当前风格：Live2D 灵动 · 模型：" + modelName + suffix);

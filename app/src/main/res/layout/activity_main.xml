@@ -58,9 +58,9 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <com.lingxi.pet.PetStage
-                android:id="@+id/preview_stage"
-                android:layout_width="wrap_content"
+            <FrameLayout
+                android:id="@+id/preview_container"
+                android:layout_width="match_parent"
                 android:layout_height="240dp" />
 
             <TextView
@@ -266,13 +266,47 @@
                 android:textColor="#2B3250"
                 android:textSize="13sp" />
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="动画风格"
+                    android:textColor="#2B3250"
+                    android:textSize="13sp" />
+
+                <Spinner
+                    android:id="@+id/sp_style"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/et_model_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/input_bg"
+                android:hint="自定义 Live2D 模型 URL（model3.json，留空用内置 Haru）"
+                android:inputType="textUri"
+                android:padding="10dp"
+                android:textColor="#2B3250"
+                android:textColorHint="#A9B1C8"
+                android:textSize="13sp" />
+
             <EditText
                 android:id="@+id/et_sprite_url"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:background="@drawable/input_bg"
-                android:hint="形象资源 URL（spritesheet.webp）"
+                android:hint="像素风格形象资源 URL（spritesheet.webp）"
                 android:inputType="textUri"
                 android:padding="10dp"
                 android:textColor="#2B3250"
@@ -394,7 +428,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:gravity="center"
-            android:text="灵汐 v1.1 · 非官方 DeepSeek 二创桌宠\n形象素材来自 codex-pet-DeepSeek-girl 开源同人项目"
+            android:text="灵汐 v1.2 · 非官方 DeepSeek 二创桌宠\n形象素材来自 codex-pet-DeepSeek-girl 开源同人项目"
             android:textColor="#B8C2DC"
             android:textSize="11sp" />
     </LinearLayout>

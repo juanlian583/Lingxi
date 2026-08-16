@@ -58,5 +58,16 @@ public final class PetConfig {
     public static String spriteUrl(Context c) { return sp(c).getString("sprite_url", DEFAULT_SPRITE_URL); }
     public static void setSpriteUrl(Context c, String v) { sp(c).edit().putString("sprite_url", v).apply(); }
 
+    // ---- 渲染风格：live2d（默认） / sprite（经典像素 DeepSeek娘） ----
+    public static final String STYLE_LIVE2D = "live2d";
+    public static final String STYLE_SPRITE = "sprite";
+    public static String petStyle(Context c) { return sp(c).getString("pet_style", STYLE_LIVE2D); }
+    public static void setPetStyle(Context c, String v) { sp(c).edit().putString("pet_style", v).apply(); }
+    public static boolean live2dMode(Context c) { return STYLE_LIVE2D.equals(petStyle(c)); }
+
+    /** 自定义 Live2D 模型 model3.json URL（为空使用内置 Haru） */
+    public static String live2dModelUrl(Context c) { return sp(c).getString("live2d_model_url", ""); }
+    public static void setLive2dModelUrl(Context c, String v) { sp(c).edit().putString("live2d_model_url", v).apply(); }
+
     private PetConfig() {}
 }

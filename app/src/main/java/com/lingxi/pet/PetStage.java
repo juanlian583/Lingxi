@@ -2,23 +2,24 @@ package com.lingxi.pet;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.AttributeSet;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import java.util.Random;
+
 /**
- * 桌宠舞台：角色 + 上方的对话气泡。
- * 应用内预览和悬浮窗都复用它。
+ * 经典像素风桌宠（DeepSeek娘 精灵图）：
+ * 精灵动画 + 原生气泡。
  */
-public class PetStage extends FrameLayout {
+public class PetStage extends BaseOverlay implements PetHost {
 
     public final PetView pet;
-    public final TextView bubble;
+    private final TextView bubble;
+    private final Random random = new Random();
 
-    private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable hideBubble;
 
     public PetStage(Context c) {
@@ -26,7 +27,7 @@ public class PetStage extends FrameLayout {
     }
 
     public PetStage(Context c, AttributeSet a) {
-        super(c, a);
+        super(c);
         setClipChildren(false);
 
         // 气泡
@@ -39,9 +40,7 @@ public class PetStage extends FrameLayout {
         bubble.setVisibility(GONE);
         bubble.setMaxWidth(dp(200));
         bubble.setOnClickListener(new OnClickListener() {
-            @Override public void onClick(android.view.View v) {
-                onBubbleClicked();
-            }
+            @Override public void onClick(View v) { onBubbleClicked(); }
         });
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
@@ -55,30 +54,49 @@ public class PetStage extends FrameLayout {
         addView(pet, new FrameLayout.LayoutParams(size, size, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
     }
 
-    /** 气泡被点击（悬浮窗中用于打开聊天） */
-    protected void onBubbleClicked() {}
+    // ---------------- PetHost ----------------
 
-    public void showBubble(String text, long ms) {
+    @Override public void showBubble(String text, long ms) {
         bubble.setText(text);
         bubble.setVisibility(VISIBLE);
-        handler.removeCallbacks(hideBubble);
+        getOverlayHandler().removeCallbacks(hideBubble);
         hideBubble = new Runnable() {
             @Override public void run() { bubble.setVisibility(GONE); }
         };
-        handler.postDelayed(hideBubble, ms);
+        getOverlayHandler().postDelayed(hideBubble, ms);
     }
 
-    public void hideBubble() {
-        handler.removeCallbacks(hideBubble);
-        bubble.setVisibility(GONE);
-    }
-
-    public void setBubbleText(String text) {
+    @Override public void setBubbleText(String text) {
         bubble.setText(text);
         bubble.setVisibility(VISIBLE);
     }
 
-    protected int dp(int v) {
-        return Math.round(getResources().getDisplayMetrics().density * v);
+    @Override public void hideBubble() {
+        getOverlayHandler().removeCallbacks(hideBubble);
+        bubble.setVisibility(GONE);
+    }
+
+    @Override public void tapReaction() {
+        int r = random.nextInt(3);
+        if (r == 0) pet.animator().playOnce(PetAnimator.State.WAVE);
+        else if (r == 1) pet.animator().playOnce(PetAnimator.State.JUMP);
+        else pet.animator().playOnce(PetAnimator.State.REVIEW);
+    }
+
+    @Override public void patReaction() {
+        pet.animator().playOnce(PetAnimator.State.JUMP);
+        spawnHearts();
+    }
+
+    @Override public void aiThinking() {
+        pet.animator().setState(PetAnimator.State.WAIT, true);
+    }
+
+    @Override public void aiReply(boolean success) {
+        pet.animator().playOnce(success ? PetAnimator.State.REVIEW : PetAnimator.State.FAIL);
+    }
+
+    @Override public void recycle() {
+        pet.animator().stop();
     }
 }

@@ -10,10 +10,13 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,30 +27,34 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 灵汐主界面：桌宠预览 + 悬浮窗开关 + AI 配置 + 形象资源管理。
+ * 灵汐主界面：桌宠预览 + 悬浮窗开关 + 动画风格 + AI 配置 + 形象资源管理。
  */
 public class MainActivity extends Activity {
 
     private static final int REQ_OVERLAY = 1001;
     private static final int REQ_NOTIF = 1002;
 
-    private PetStage preview;
+    private FrameLayout previewContainer;
+    private PetHost previewHost;
     private Switch swOverlay, swTts, swAuto;
-    private EditText etChat, etBase, etKey, etModel, etPrompt, etSprite;
+    private EditText etChat, etBase, etKey, etModel, etPrompt, etSprite, etModelUrl;
     private TextView tvChatReply, tvSpriteStatus, tvPetInfo, tvSizeLabel;
     private SeekBar seekSize;
+    private Spinner spStyle;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         bindViews();
         loadConfigIntoUi();
+        setupStyleSpinner();
         setupListeners();
+        buildPreview();
         showPetInfo();
     }
 
     private void bindViews() {
-        preview = findViewById(R.id.preview_stage);
+        previewContainer = findViewById(R.id.preview_container);
         swOverlay = findViewById(R.id.sw_overlay);
         swTts = findViewById(R.id.sw_tts);
         swAuto = findViewById(R.id.sw_autostart);
@@ -58,10 +65,12 @@ public class MainActivity extends Activity {
         etModel = findViewById(R.id.et_model);
         etPrompt = findViewById(R.id.et_prompt);
         etSprite = findViewById(R.id.et_sprite_url);
+        etModelUrl = findViewById(R.id.et_model_url);
         tvSpriteStatus = findViewById(R.id.tv_sprite_status);
         tvPetInfo = findViewById(R.id.tv_pet_info);
         tvSizeLabel = findViewById(R.id.tv_size_label);
         seekSize = findViewById(R.id.seek_pet_size);
+        spStyle = findViewById(R.id.sp_style);
     }
 
     private void loadConfigIntoUi() {
@@ -73,30 +82,63 @@ public class MainActivity extends Activity {
         etModel.setText(PetConfig.model(this));
         etPrompt.setText(PetConfig.systemPrompt(this));
         etSprite.setText(PetConfig.spriteUrl(this));
+        etModelUrl.setText(PetConfig.live2dModelUrl(this));
         int size = PetConfig.petSizeDp(this);
         seekSize.setProgress(size - 100);
         tvSizeLabel.setText("形象大小：" + size + " dp");
-        tvSpriteStatus.setText(hasLocalSprite() ? "形象资源：本地已就绪 ✅" : "形象资源：未下载（将使用内置资源）");
+        tvSpriteStatus.setText(hasLocalSprite() ? "像素风格资源：本地已就绪 ✅" : "像素风格资源：未下载（将使用内置资源）");
     }
 
-    private void setupListeners() {
-        // 预览互动
-        preview.pet.setListener(new PetView.Listener() {
+    private void setupStyleSpinner() {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item,
+                new String[]{"Live2D 灵动（默认）", "DeepSeek娘 经典像素"});
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spStyle.setAdapter(adapter);
+        spStyle.setSelection(PetConfig.live2dMode(this) ? 0 : 1);
+        final boolean[] ready = {false};
+        spStyle.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (!ready[0]) { ready[0] = true; return; }
+                String style = (position == 0) ? PetConfig.STYLE_LIVE2D : PetConfig.STYLE_SPRITE;
+                PetConfig.setPetStyle(MainActivity.this, style);
+                buildPreview();
+                restartPetService();
+                showPetInfo();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+    }
+
+    private void buildPreview() {
+        if (previewHost != null) {
+            try { previewHost.recycle(); } catch (Exception ignored) {}
+            previewHost = null;
+        }
+        previewContainer.removeAllViews();
+        BaseOverlay host = PetConfig.live2dMode(this)
+                ? new Live2dStage(this)
+                : new PetStage(this);
+        previewHost = host;
+        previewContainer.addView(host,
+                new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+        host.setListener(new PetView.Listener() {
             @Override public void onTap() {
-                preview.pet.animator().playOnce(PetAnimator.State.WAVE);
-                preview.showBubble("嗨～主人！我是灵汐 🐳", 3000);
+                host.tapReaction();
+                host.showBubble("嗨～主人！我是灵汐 🐳", 3000);
             }
             @Override public void onPat() {
-                preview.pet.animator().playOnce(PetAnimator.State.JUMP);
-                preview.pet.spawnHearts();
-                preview.showBubble("嘻嘻，被摸头好舒服～", 3000);
+                host.patReaction();
+                host.showBubble("嘻嘻，被摸头好舒服～", 3000);
             }
             @Override public void onLongPress() {
                 Toast.makeText(MainActivity.this, "长按可以拖动我哦（悬浮窗里）", Toast.LENGTH_SHORT).show();
             }
         });
+    }
 
-        // 悬浮窗开关
+    private void setupListeners() {
         swOverlay.setOnCheckedChangeListener((v, on) -> {
             PetConfig.setOverlayEnabled(this, on);
             if (on) {
@@ -112,20 +154,26 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 应用内快速聊天
         findViewById(R.id.btn_chat_send).setOnClickListener(v -> sendChat());
 
-        // 设置项自动保存
         watch(etBase, s -> PetConfig.setApiBase(this, s));
         watch(etKey, s -> PetConfig.setApiKey(this, s));
         watch(etModel, s -> PetConfig.setModel(this, s));
         watch(etPrompt, s -> PetConfig.setSystemPrompt(this, s));
         watch(etSprite, s -> PetConfig.setSpriteUrl(this, s));
+        watch(etModelUrl, s -> PetConfig.setLive2dModelUrl(this, s));
+
+        // 模型 URL 输入完成后（失焦）应用
+        etModelUrl.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                buildPreview();
+                restartPetService();
+            }
+        });
 
         swTts.setOnCheckedChangeListener((v, on) -> PetConfig.setTtsEnabled(this, on));
         swAuto.setOnCheckedChangeListener((v, on) -> PetConfig.setAutostart(this, on));
 
-        // 大小调节
         seekSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
                 int size = progress + 100;
@@ -134,7 +182,6 @@ public class MainActivity extends Activity {
             }
             @Override public void onStartTrackingTouch(SeekBar sb) {}
             @Override public void onStopTrackingTouch(SeekBar sb) {
-                // 悬浮窗运行时应用新大小
                 if (PetService.running) {
                     stopPetService();
                     if (Settings.canDrawOverlays(MainActivity.this)) startPetService();
@@ -142,7 +189,6 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 下载形象资源
         findViewById(R.id.btn_sprite_download).setOnClickListener(v -> downloadSprite());
     }
 
@@ -157,6 +203,10 @@ public class MainActivity extends Activity {
     }
 
     private void showPetInfo() {
+        if (PetConfig.live2dMode(this)) {
+            tvPetInfo.setText("当前风格：Live2D 灵动 · 内置模型 Haru（Live2D 官方示例·蓝发少女）");
+            return;
+        }
         try (InputStream is = getAssets().open("pet.json")) {
             byte[] buf = new byte[is.available()];
             int off = 0;
@@ -168,9 +218,9 @@ public class MainActivity extends Activity {
             JSONObject o = new JSONObject(new String(buf, 0, off, StandardCharsets.UTF_8));
             String name = o.optString("displayName", "DeepSeek娘");
             String desc = o.optString("description", "");
-            tvPetInfo.setText("当前形象：" + name + " —— " + desc);
+            tvPetInfo.setText("当前风格：DeepSeek娘 经典像素 —— " + name + " " + desc);
         } catch (Exception e) {
-            tvPetInfo.setText("当前形象：DeepSeek娘（蓝发鲸鱼女仆）");
+            tvPetInfo.setText("当前风格：DeepSeek娘 经典像素");
         }
     }
 
@@ -179,6 +229,10 @@ public class MainActivity extends Activity {
     }
 
     private void downloadSprite() {
+        if (PetConfig.live2dMode(this)) {
+            Toast.makeText(this, "当前是 Live2D 风格，无需下载像素资源", Toast.LENGTH_SHORT).show();
+            return;
+        }
         final String url = etSprite.getText().toString().trim();
         if (url.isEmpty()) {
             Toast.makeText(this, "请先填写形象资源 URL", Toast.LENGTH_SHORT).show();
@@ -188,8 +242,10 @@ public class MainActivity extends Activity {
         PetResources.download(this, url, () -> {
             tvSpriteStatus.setText("形象资源下载成功 ✅");
             PetResources.invalidateCache();
-            preview.pet.animator().setSheet(PetResources.load(this));
-            preview.showBubble("新衣服到手啦～好看吗？", 3500);
+            if (previewHost instanceof PetStage) {
+                ((PetStage) previewHost).pet.animator().setSheet(PetResources.load(this));
+            }
+            previewHost.showBubble("新衣服到手啦～好看吗？", 3500);
             Toast.makeText(this, "形象资源已更新", Toast.LENGTH_SHORT).show();
         }, () -> {
             tvSpriteStatus.setText("下载失败，请检查 URL 与网络");
@@ -202,8 +258,8 @@ public class MainActivity extends Activity {
         if (text.isEmpty()) return;
         etChat.setText("");
         tvChatReply.setText("灵汐：让我想想…");
-        preview.pet.animator().setState(PetAnimator.State.WAIT, true);
-        preview.showBubble("让我想想…", 60000);
+        previewHost.aiThinking();
+        previewHost.showBubble("让我想想…", 60000);
         new Thread(() -> {
             String reply;
             boolean ok;
@@ -217,9 +273,9 @@ public class MainActivity extends Activity {
             final String r = reply;
             final boolean s = ok;
             runOnUiThread(() -> {
-                preview.pet.animator().playOnce(s ? PetAnimator.State.REVIEW : PetAnimator.State.FAIL);
-                preview.hideBubble();
-                preview.showBubble(r, Math.min(12000, 3000 + r.length() * 80));
+                previewHost.aiReply(s);
+                previewHost.hideBubble();
+                previewHost.showBubble(r, Math.min(12000, 3000 + r.length() * 80));
                 tvChatReply.setText("灵汐：" + r);
                 SpeechHelper.speak(this, r);
             });
@@ -240,6 +296,19 @@ public class MainActivity extends Activity {
     private void stopPetService() {
         Intent i = new Intent(this, PetService.class).setAction("STOP");
         startService(i);
+    }
+
+    private void restartPetService() {
+        if (PetService.running) {
+            stopPetService();
+            if (Settings.canDrawOverlays(this)) {
+                handlerPostDelayed(500, this::startPetService);
+            }
+        }
+    }
+
+    private void handlerPostDelayed(long ms, Runnable r) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(r, ms);
     }
 
     private void requestOverlayPermission() {

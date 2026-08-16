@@ -7,7 +7,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.graphics.PixelFormat;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -15,10 +14,10 @@ import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 /**
  * 悬浮桌宠前台服务：把灵汐显示在所有应用（桌面）之上。
+ * 支持 Live2D（默认）与经典像素精灵图两种风格。
  */
 public class PetService extends Service {
 
@@ -28,7 +27,7 @@ public class PetService extends Service {
     private static final String CHANNEL_ID = "lingxi_pet";
 
     private WindowManager wm;
-    private PetOverlayView overlay;
+    private BaseOverlay overlay;
     private WindowManager.LayoutParams params;
     private ChatDialog chatDialog;
     private volatile boolean aiBusy = false;
@@ -51,14 +50,13 @@ public class PetService extends Service {
             }
             String line = LINES[(int) (Math.random() * LINES.length)];
             overlay.setBubbleText(line);
-            overlay.pet.animator().playOnce(PetAnimator.State.WAVE);
-            final String spoken = line;
+            overlay.tapReaction();
             handler.postDelayed(new Runnable() {
                 @Override public void run() {
                     if (overlay != null) overlay.hideBubble();
                 }
             }, 4200);
-            SpeechHelper.speak(PetService.this, spoken);
+            SpeechHelper.speak(PetService.this, line);
             handler.postDelayed(this, 90000);
         }
     };
@@ -104,15 +102,18 @@ public class PetService extends Service {
         params.x = dm.widthPixels - petPx - margin;
         params.y = dm.heightPixels - petPx - margin;
 
-        overlay = new PetOverlayView(this, wm, params);
-        overlay.pet.setListener(new PetView.Listener() {
+        BaseOverlay ov = PetConfig.live2dMode(this)
+                ? new Live2dOverlayView(this, wm, params)
+                : new PetOverlayView(this, wm, params);
+        overlay = ov;
+        overlay.setListener(new PetView.Listener() {
             @Override public void onTap() { onTapInteract(); }
             @Override public void onPat() { onPat(); }
             @Override public void onLongPress() { showMenu(); }
         });
-        overlay.bubbleClickListener = new Runnable() {
+        overlay.setBubbleClickListener(new Runnable() {
             @Override public void run() { openChat(); }
-        };
+        });
         wm.addView(overlay, params);
         handler.removeCallbacks(idleLines);
         handler.postDelayed(idleLines, 30000);
@@ -123,23 +124,20 @@ public class PetService extends Service {
         String line;
         int r = (int) (Math.random() * 3);
         if (r == 0) {
-            overlay.pet.animator().playOnce(PetAnimator.State.WAVE);
             line = "嗨～主人！";
         } else if (r == 1) {
-            overlay.pet.animator().playOnce(PetAnimator.State.JUMP);
             line = "耶！好开心！";
         } else {
-            overlay.pet.animator().playOnce(PetAnimator.State.REVIEW);
             line = "嗯嗯，我在听着呢～";
         }
+        overlay.tapReaction();
         overlay.showBubble(line, 3500);
         SpeechHelper.speak(this, line);
     }
 
     private void onPat() {
         if (aiBusy) return;
-        overlay.pet.animator().playOnce(PetAnimator.State.JUMP);
-        overlay.pet.spawnHearts();
+        overlay.patReaction();
         String line = "嘻嘻，被主人摸头好舒服～";
         overlay.showBubble(line, 4000);
         SpeechHelper.speak(this, line);
@@ -180,7 +178,7 @@ public class PetService extends Service {
         if (aiBusy) return;
         aiBusy = true;
         overlay.setBubbleText("让我想想…");
-        overlay.pet.animator().setState(PetAnimator.State.WAIT, true);
+        overlay.aiThinking();
         new Thread(new Runnable() {
             @Override public void run() {
                 String reply;
@@ -198,7 +196,7 @@ public class PetService extends Service {
                     @Override public void run() {
                         aiBusy = false;
                         if (overlay == null) return;
-                        overlay.pet.animator().playOnce(success ? PetAnimator.State.REVIEW : PetAnimator.State.FAIL);
+                        overlay.aiReply(success);
                         overlay.setBubbleText(r);
                         handler.postDelayed(new Runnable() {
                             @Override public void run() {
@@ -247,6 +245,7 @@ public class PetService extends Service {
         handler.removeCallbacksAndMessages(null);
         if (overlay != null && wm != null) {
             try { wm.removeView(overlay); } catch (Exception ignored) {}
+            try { overlay.recycle(); } catch (Exception ignored) {}
             overlay = null;
         }
         if (chatDialog != null) {

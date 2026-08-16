@@ -68,26 +68,73 @@
         } catch (e) { return false; }
     }
 
-    /* 按名称关键词设置表情（无匹配则忽略），支持 NOIR 的 eyeclose/quanquan/tears/white */
-    function setExpression(nameLike) {
-        if (!model) return;
+    /* 表情定义（正确的库路径：internalModel.motionManager.expressionManager） */
+    function getExpressionDefs() {
         try {
-            var defs = model.internalModel.expressionManager.definitions;
-            if (!defs || !defs.length) return;
+            var em = model.internalModel.motionManager.expressionManager;
+            return (em && em.definitions) || null;
+        } catch (e) { return null; }
+    }
+
+    var lastExprParams = [];
+
+    function findExpressionFile(nameLike, defs) {
+        if (defs) {
+            for (var i = 0; i < defs.length; i++) {
+                var n = ((defs[i].Name || '') + ' ' + (defs[i].File || ''));
+                if (n.indexOf(nameLike) >= 0) return defs[i].File;
+            }
+        }
+        // NOIR 内置表情兜底
+        if (MODEL.toLowerCase().indexOf('noir') >= 0) {
+            var map = { eyeclose: 'eyeclose.exp3.json', quanquan: 'quanquan.exp3.json',
+                        tears: 'tears.exp3.json', white: 'white.exp3.json' };
+            return map[nameLike] || null;
+        }
+        return null;
+    }
+
+    /* 应用表情：走库 API + 直接解析 exp3 参数双保险 */
+    function applyExpression(nameLike) {
+        if (!model) return;
+        var defs = getExpressionDefs();
+        if (defs && defs.length) {
             for (var i = 0; i < defs.length; i++) {
                 var n = ((defs[i].Name || '') + ' ' + (defs[i].File || ''));
                 if (n.indexOf(nameLike) >= 0) {
-                    model.expression(defs[i].Name);
-                    return;
+                    try {
+                        model.expression(defs[i].Name);
+                        dbgLine('表情(库API): ' + defs[i].Name);
+                    } catch (e) { reportError('expression: ' + e.message); }
+                    break;
                 }
             }
-        } catch (e) {}
+        }
+        var file = findExpressionFile(nameLike, defs);
+        if (file) {
+            var base = MODEL.indexOf('/') >= 0 ? MODEL.substring(0, MODEL.lastIndexOf('/')) : '';
+            fetch((base ? base + '/' : '') + file).then(function (r) { return r.json(); })
+                .then(function (exp) {
+                    try {
+                        var params = exp.Parameters || [];
+                        lastExprParams = [];
+                        params.forEach(function (p) {
+                            setParam(p.Id, p.Value);
+                            lastExprParams.push(p.Id);
+                        });
+                        dbgLine('表情参数已应用: ' + file + ' -> ' + params.length + ' 个参数');
+                    } catch (e2) {}
+                })
+                .catch(function (e3) { dbgLine('表情文件加载失败: ' + e3.message); });
+        }
     }
 
     function resetExpressionSoon(ms) {
         try {
             setTimeout(function () {
                 try { model.resetExpression(); } catch (e) {}
+                lastExprParams.forEach(function (id) { setParam(id, 0); });
+                lastExprParams = [];
             }, ms || 1600);
         } catch (e) {}
     }
@@ -255,7 +302,7 @@
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('TapBody'); });
             else procTap();
-            setExpression('quanquan');
+            applyExpression('quanquan');
             resetExpressionSoon();
         },
         pat: function () {
@@ -268,14 +315,14 @@
             } else {
                 procPat();
             }
-            setExpression('eyeclose');
+            applyExpression('eyeclose');
             resetExpressionSoon();
         },
         think: function () {
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('Idle'); });
             else procThink();
-            setExpression('quanquan');
+            applyExpression('quanquan');
             resetExpressionSoon(4500);
         },
         reply: function (ok) {
@@ -288,7 +335,7 @@
             } else {
                 procReply(ok);
             }
-            setExpression(ok ? 'eyeclose' : 'tears');
+            applyExpression(ok ? 'eyeclose' : 'tears');
             resetExpressionSoon();
         }
     };

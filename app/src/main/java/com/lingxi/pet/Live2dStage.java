@@ -83,6 +83,11 @@ public class Live2dStage extends BaseOverlay implements PetHost {
             @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
                 debug("HTTP " + errorResponse.getStatusCode() + " <- " + request.getUrl());
             }
+            @Override public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                // 渲染进程崩溃时默认会杀死整个应用——拦截并记录，避免桌宠操作连带关闭 App
+                debug("❌ WebView 渲染进程崩溃: didCrash=" + detail.didCrash());
+                return true;
+            }
         });
         webView.addJavascriptInterface(new JsBridge(), "LingxiNative");
 

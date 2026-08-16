@@ -120,27 +120,35 @@ public class PetService extends Service {
     }
 
     private void onTapInteract() {
-        if (aiBusy) return;
-        String line;
-        int r = (int) (Math.random() * 3);
-        if (r == 0) {
-            line = "嗨～主人！";
-        } else if (r == 1) {
-            line = "耶！好开心！";
-        } else {
-            line = "嗯嗯，我在听着呢～";
+        try {
+            if (aiBusy) return;
+            String line;
+            int r = (int) (Math.random() * 3);
+            if (r == 0) {
+                line = "嗨～主人！";
+            } else if (r == 1) {
+                line = "耶！好开心！";
+            } else {
+                line = "嗯嗯，我在听着呢～";
+            }
+            overlay.tapReaction();
+            overlay.showBubble(line, 3500);
+            SpeechHelper.speak(this, line);
+        } catch (Exception e) {
+            LingxiDiagnostics.append("onTapInteract 异常: " + e);
         }
-        overlay.tapReaction();
-        overlay.showBubble(line, 3500);
-        SpeechHelper.speak(this, line);
     }
 
     private void onPat() {
-        if (aiBusy) return;
-        overlay.patReaction();
-        String line = "嘻嘻，被主人摸头好舒服～";
-        overlay.showBubble(line, 4000);
-        SpeechHelper.speak(this, line);
+        try {
+            if (aiBusy) return;
+            overlay.patReaction();
+            String line = "嘻嘻，被主人摸头好舒服～";
+            overlay.showBubble(line, 4000);
+            SpeechHelper.speak(this, line);
+        } catch (Exception e) {
+            LingxiDiagnostics.append("onPat 异常: " + e);
+        }
     }
 
     private void showMenu() {

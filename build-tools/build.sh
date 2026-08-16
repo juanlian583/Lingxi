@@ -82,18 +82,18 @@ fi
 "$APKSIGNER" sign --ks "$KEYSTORE" --ks-key-alias lingxi \
     --ks-pass "pass:$KEYSTORE_PASS" --key-pass "pass:$KEYSTORE_PASS" \
     --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
-    --out dist/lingxi-v1.3.3.apk build/withdex.apk
+    --out dist/lingxi-v1.4.apk build/withdex.apk
 
 echo "[8/8] 验证"
-"$APKSIGNER" verify --verbose dist/lingxi-v1.3.3.apk
+"$APKSIGNER" verify --verbose dist/lingxi-v1.4.apk
 echo "---- badging ----"
-run_aapt2 dump badging dist/lingxi-v1.3.3.apk | grep -E "^(package|application-label|sdkVersion|targetSdkVersion|uses-permission)" | head -12
+run_aapt2 dump badging dist/lingxi-v1.4.apk | grep -E "^(package|application-label|sdkVersion|targetSdkVersion|uses-permission)" | head -12
 echo "---- APK 内容 ----"
 python3 - <<'EOF'
 import zipfile
-z = zipfile.ZipFile("dist/lingxi-v1.3.3.apk")
+z = zipfile.ZipFile("dist/lingxi-v1.4.apk")
 for n in z.namelist():
     print("  ", n)
-print("APK size:", __import__('os').path.getsize("dist/lingxi-v1.3.3.apk"), "bytes")
+print("APK size:", __import__('os').path.getsize("dist/lingxi-v1.4.apk"), "bytes")
 EOF
-echo "✅ 构建完成: dist/lingxi-v1.3.3.apk"
+echo "✅ 构建完成: dist/lingxi-v1.4.apk"

@@ -16,7 +16,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.TextView;
 
 import org.json.JSONObject;
 
@@ -31,8 +30,6 @@ public class Live2dStage extends BaseOverlay implements PetHost {
 
     protected WebView webView;
     private boolean pageLoaded = false;
-    private TextView debugView;
-    private int debugCount = 0;
 
     public Live2dStage(Context c) {
         this(c, null);
@@ -45,22 +42,6 @@ public class Live2dStage extends BaseOverlay implements PetHost {
         int size = dp(PetConfig.petSizeDp(c));
         int w = size;
         int h = dp((int) (PetConfig.petSizeDp(c) * 208f / 192f));
-
-        // 屏上诊断面板（叠加在 WebView 上方）
-        debugView = new TextView(c);
-        debugView.setTextColor(0xFF7CFC98);
-        debugView.setTextSize(9);
-        debugView.setTypeface(android.graphics.Typeface.MONOSPACE);
-        debugView.setBackgroundColor(0xCC000000);
-        debugView.setPadding(dp(4), dp(3), dp(4), dp(3));
-        debugView.setLineSpacing(1f, 1f);
-        debugView.setVisibility(VISIBLE);
-        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(
-                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        dlp.topMargin = dp(2);
-        addView(debugView, dlp);
-        debug("原生诊断面板就绪, 期望视口 " + w + "x" + h);
 
         webView = new WebView(c);
         webView.setBackgroundColor(Color.TRANSPARENT);
@@ -112,18 +93,6 @@ public class Live2dStage extends BaseOverlay implements PetHost {
     private void debug(String msg) {
         Log.d(TAG, msg);
         LingxiDiagnostics.append(msg);
-        if (debugView == null) return;
-        debugCount++;
-        String line = debugCount + ". " + msg;
-        String cur = debugView.getText().toString();
-        String[] lines = cur.split("\n");
-        StringBuilder sb = new StringBuilder();
-        int start = Math.max(0, lines.length - 12);
-        for (int i = start; i < lines.length; i++) {
-            if (!lines[i].isEmpty()) sb.append(lines[i]).append('\n');
-        }
-        sb.append(line);
-        debugView.setText(sb.toString());
     }
 
     /** 自定义模型 URL（model3.json），为空则用内置 Haru */

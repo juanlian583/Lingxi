@@ -67,10 +67,10 @@ echo "[5/8] d8 打包 dex"
 find build/classes -name '*.class' > build/classes.txt
 "$D8" --release --min-api 26 --lib "$ANDROID_JAR" --output build/dex @build/classes.txt
 
-echo "[6/8] 注入 classes.dex"
-python3 build-tools/add-dex.py build/unsigned.apk build/dex/classes.dex build/withdex.apk
+echo "[6/8] 保真重打包 + 注入 classes.dex（保留对齐）"
+python3 build-tools/repackage.py build/unsigned.apk build/dex/classes.dex build/withdex.apk
 
-echo "[7/8] 签名"
+echo "[7/8] 签名（v1 + v2 + v3 全启用，兼容所有 Android 版本）"
 KEYSTORE="${KEYSTORE:-keystore/lingxi.jks}"
 KEYSTORE_PASS="${KEYSTORE_PASS:-lingxi123}"
 mkdir -p keystore dist
@@ -81,6 +81,7 @@ if [ ! -f "$KEYSTORE" ]; then
 fi
 "$APKSIGNER" sign --ks "$KEYSTORE" --ks-key-alias lingxi \
     --ks-pass "pass:$KEYSTORE_PASS" --key-pass "pass:$KEYSTORE_PASS" \
+    --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
     --out dist/lingxi-v1.0.apk build/withdex.apk
 
 echo "[8/8] 验证"

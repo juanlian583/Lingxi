@@ -107,9 +107,9 @@ public class PetService extends Service {
                 : new PetOverlayView(this, wm, params);
         overlay = ov;
         overlay.setListener(new PetView.Listener() {
-            @Override public void onTap() { onTapInteract(); }
-            @Override public void onPat() { onPat(); }
-            @Override public void onLongPress() { showMenu(); }
+            @Override public void onTap() { PetService.this.onTapInteract(); }
+            @Override public void onPat() { PetService.this.onPat(); }
+            @Override public void onLongPress() { PetService.this.showMenu(); }
         });
         overlay.setBubbleClickListener(new Runnable() {
             @Override public void run() { openChat(); }

@@ -122,7 +122,6 @@
                     });
                     if (!params.length) return;
                     if (exprResetTimer) clearTimeout(exprResetTimer);
-                    // 记录初始值，tween 到表情值
                     var list = [];
                     params.forEach(function (p) {
                         var init = getParamValue(p.Id, 0);
@@ -131,7 +130,6 @@
                     });
                     activeExprParams = list;
                     dbgLine('表情(自主): ' + file + ' -> ' + params.length + ' 个参数');
-                    // 保持后 tween 回初始值（回归待机表情）
                     exprResetTimer = setTimeout(function () {
                         var l = activeExprParams;
                         activeExprParams = null;
@@ -145,6 +143,171 @@
                 } catch (e2) { reportError('表情应用异常: ' + e2.message); }
             })
             .catch(function (e3) { dbgLine('表情文件加载失败: ' + e3.message); });
+    }
+
+    // 歪头打招呼
+    function procTap() {
+        animParam('ParamAngleZ', 0, 18, 220);
+        animParam('ParamAngleZ', 18, -10, 260, 240);
+        animParam('ParamAngleZ', -10, 0, 220, 520);
+        animParam('ParamBodyAngleZ', 0, 8, 220);
+        animParam('ParamBodyAngleZ', 8, 0, 400, 300);
+    }
+
+    // 开心弹跳
+    function procPat() {
+        animParam('ParamBodyAngleZ', 0, -10, 150);
+        animParam('ParamBodyAngleZ', -10, 12, 250, 160);
+        animParam('ParamBodyAngleZ', 12, 0, 250, 420);
+        animParam('ParamAngleZ', 0, 12, 150);
+        animParam('ParamAngleZ', 12, -8, 250, 160);
+        animParam('ParamAngleZ', -8, 0, 250, 420);
+        animParam('ParamMouthOpenY', 0, 0.6, 120);
+        animParam('ParamMouthOpenY', 0.6, 0, 300, 150);
+    }
+
+    // 歪头思考（结束自动归位）
+    function procThink() {
+        animParam('ParamAngleZ', 0, 14, 400);
+        animParam('ParamAngleZ', 14, 0, 500, 600);
+        animParam('ParamEyeLOpen', 1, 0.6, 300);
+        animParam('ParamEyeLOpen', 0.6, 1, 400, 800);
+    }
+
+    // 点头 / 摇头
+    function procReply(ok) {
+        if (ok) {
+            animParam('ParamAngleX', 0, 14, 180);
+            animParam('ParamAngleX', 14, 0, 300, 200);
+        } else {
+            animParam('ParamAngleX', 0, -16, 150);
+            animParam('ParamAngleX', -16, 16, 250, 150);
+            animParam('ParamAngleX', 16, -12, 250, 400);
+            animParam('ParamAngleX', -12, 0, 250, 650);
+        }
+    }
+
+    // 待机轻摆
+    function procIdleSway() {
+        animParam('ParamAngleZ', 0, 6, 800);
+        animParam('ParamAngleZ', 6, -6, 1600, 900);
+        animParam('ParamAngleZ', -6, 0, 800, 2600);
+    }
+
+    /* 动作结束后：把所有动作参数平滑回归默认，再播放一次待机摇摆 */
+    var returnTimer = null;
+
+    function returnToIdle() {
+        if (!model || !ready) return;
+        var defaults = {
+            ParamAngleX: 0, ParamAngleY: 0, ParamAngleZ: 0,
+            ParamBodyAngleX: 0, ParamBodyAngleY: 0, ParamBodyAngleZ: 0,
+            ParamEyeLOpen: 1, ParamEyeROpen: 1,
+            ParamMouthOpenY: 0, ParamJawOpen: 0
+        };
+        var i = 0;
+        var touched = 0;
+        for (var id in defaults) {
+            if (!defaults.hasOwnProperty(id)) continue;
+            var from = getParam(id, defaults[id]);
+            if (Math.abs(from - defaults[id]) > 0.01) {
+                animParam(id, from, defaults[id], 450, i * 40);
+                touched++;
+                i++;
+            }
+        }
+        if (touched > 0) dbgLine('回归待机: ' + touched + ' 个参数归位');
+        setTimeout(function () {
+            if (ready && model) procIdleSway();
+        }, 700 + i * 40);
+    }
+
+    function scheduleReturnToIdle(delayMs) {
+        if (returnTimer) clearTimeout(returnTimer);
+        returnTimer = setTimeout(function () { returnToIdle(); }, delayMs || 3500);
+    }
+
+    // ---------- 加载与适配 ----------
+
+    function fit() {
+        if (!model || !app) return;
+        try {
+            var w = Math.max(document.documentElement.clientWidth, window.innerWidth) || 1;
+            var h = Math.max(document.documentElement.clientHeight, window.innerHeight) || 1;
+            app.renderer.resize(w, h);
+            var mw = (model.internalModel && model.internalModel.width) || 1024;
+            var mh = (model.internalModel && model.internalModel.height) || 1024;
+            var s = Math.min(w / mw, h / mh);
+            model.scale.set(s);
+            model.x = w / 2;
+            model.y = h;
+            model.anchor.set(0.5, 1.0);
+            if (s.toFixed(3) !== (window.__lastScale || '')) {
+                window.__lastScale = s.toFixed(3);
+                dbgLine('适配: 模型 ' + mw + 'x' + mh + ' scale=' + s.toFixed(3));
+            }
+        } catch (e) { reportError('fit 异常: ' + e.message); }
+    }
+
+    function safe(fn) {
+        try { fn(); } catch (e) { reportError(e.message); }
+    }
+
+    function showBubble(text, ms) {
+        if (!bubbleEl) return;
+        bubbleEl.textContent = text || '';
+        bubbleEl.style.display = 'block';
+        if (bubbleTimer) clearTimeout(bubbleTimer);
+        bubbleTimer = setTimeout(function () { bubbleEl.style.display = 'none'; }, ms || 4000);
+    }
+
+    async function boot() {
+        try {
+            app = new PIXI.Application({
+                view: canvas,
+                transparent: true,
+                backgroundAlpha: 0,
+                antialias: true,
+                autoDensity: true,
+                resolution: window.devicePixelRatio || 1
+            });
+            if (!PIXI.live2d || !PIXI.live2d.Live2DModel) {
+                reportError('pixi-live2d-display 未加载');
+                return;
+            }
+            if (PIXI.live2d.Live2DModel.registerTicker) {
+                PIXI.live2d.Live2DModel.registerTicker(PIXI.Ticker);
+            }
+            dbgLine('开始加载模型: ' + MODEL);
+            model = await PIXI.live2d.Live2DModel.from(MODEL, { autoInteract: false });
+            dbgLine('模型加载成功 ✅ 动作: ' + (hasMotions() ? '内置动作' : '程序化动画'));
+            app.stage.addChild(model);
+            fit();
+            initTweener();
+            // 视口尺寸可能晚于模型就绪，前 10 秒持续校准
+            var n = 0;
+            var fitTimer = setInterval(function () {
+                if (++n > 20) { clearInterval(fitTimer); return; }
+                fit();
+            }, 500);
+            window.addEventListener('resize', fit);
+            ready = true;
+            dbgLine('灵汐 Live2D 就绪 ✅');
+            if (window.LingxiNative && window.LingxiNative.onReady) {
+                safe(function () { window.LingxiNative.onReady(); });
+            }
+            scheduleIdle();
+        } catch (e) {
+            reportError('Live2D 启动失败: ' + (e && e.message));
+            if (MODEL !== 'Haru/Haru.model3.json') {
+                dbgLine('回退到内置模型…');
+                MODEL = 'Haru/Haru.model3.json';
+                try { if (app) { app.destroy(true); app = null; model = null; } } catch (e2) {}
+                boot();
+            } else {
+                showBubble('😢 模型加载失败，请复制诊断日志反馈', 60000);
+            }
+        }
     }
 
     function scheduleIdle() {

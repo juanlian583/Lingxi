@@ -136,6 +136,15 @@
 
     /* 暴露给原生的 API */
     window.Lingxi = {
+        /* 拖拽中暂停渲染器，减少重绘、窗口移动更流畅 */
+        setDragging: function (d) {
+            try {
+                if (app) {
+                    if (d) app.ticker.stop();
+                    else app.ticker.start();
+                }
+            } catch (e) { reportError('setDragging: ' + e.message); }
+        },
         say: function (text) { showBubble(text, 5000); },
         showBubble: function (text, ms) { showBubble(text, ms || 4000); },
         hideBubble: function () {

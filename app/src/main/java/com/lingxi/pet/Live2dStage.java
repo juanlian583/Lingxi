@@ -145,6 +145,11 @@ public class Live2dStage extends BaseOverlay implements PetHost {
 
     // ---------------- PetHost ----------------
 
+    /** 拖拽时暂停 Live2D 渲染，窗口移动更流畅 */
+    @Override protected void onDragStateChanged(boolean dragging) {
+        js("Lingxi.setDragging(" + dragging + ")");
+    }
+
     @Override public void showBubble(String text, long ms) {
         js("Lingxi.showBubble(" + q(text) + ", " + ms + ")");
     }

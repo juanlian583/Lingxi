@@ -32,7 +32,7 @@ public abstract class BaseOverlay extends FrameLayout implements PetHost {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final GestureDetector gesture;
     private final int touchSlop;
-    private float downX, downY;
+    private float rawDownX, rawDownY;
     private boolean dragging = false;
     private boolean longPressArmed = false;
     private Runnable longPressRunnable;
@@ -78,8 +78,9 @@ public abstract class BaseOverlay extends FrameLayout implements PetHost {
     @Override public boolean onTouchEvent(MotionEvent e) {
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                downX = e.getX();
-                downY = e.getY();
+                // 用屏幕绝对坐标（raw）拖拽，避免窗口移动导致坐标漂移震荡
+                rawDownX = e.getRawX();
+                rawDownY = e.getRawY();
                 dragging = false;
                 longPressArmed = true;
                 longPressRunnable = new Runnable() {
@@ -94,8 +95,8 @@ public abstract class BaseOverlay extends FrameLayout implements PetHost {
                 return true;
 
             case MotionEvent.ACTION_MOVE: {
-                float dx = e.getX() - downX;
-                float dy = e.getY() - downY;
+                float dx = e.getRawX() - rawDownX;
+                float dy = e.getRawY() - rawDownY;
                 if (!dragging && Math.hypot(dx, dy) > touchSlop) {
                     longPressArmed = false;
                     handler.removeCallbacks(longPressRunnable);
@@ -138,6 +139,7 @@ public abstract class BaseOverlay extends FrameLayout implements PetHost {
         if (params == null) return;
         baseX = params.x;
         baseY = params.y;
+        onDragStateChanged(true);
     }
 
     protected void onDrag(float dx, float dy) {
@@ -151,7 +153,11 @@ public abstract class BaseOverlay extends FrameLayout implements PetHost {
         if (params == null) return;
         baseX = params.x;
         baseY = params.y;
+        onDragStateChanged(false);
     }
+
+    /** 拖拽状态变化（子类可暂停/恢复渲染以提升流畅度） */
+    protected void onDragStateChanged(boolean dragging) {}
 
     // ---------------- 爱心特效（共用） ----------------
 

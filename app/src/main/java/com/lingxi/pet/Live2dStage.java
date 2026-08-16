@@ -95,10 +95,17 @@ public class Live2dStage extends BaseOverlay implements PetHost {
         LingxiDiagnostics.append(msg);
     }
 
-    /** 自定义模型 URL（model3.json），为空则用内置 Haru */
+    /** 自定义模型 URL（model3.json），为空则用内置模型 */
     protected String customModelUrl() {
         String u = PetConfig.live2dModelUrl(getContext());
         return (u == null || u.trim().isEmpty()) ? null : u.trim();
+    }
+
+    /** 内置模型路径（相对本地服务器根） */
+    protected String builtinModelPath() {
+        return PetConfig.MODEL_BAIXI.equals(PetConfig.live2dModel(getContext()))
+                ? "Baixi/baixifree.model3.json"
+                : "Haru/Haru.model3.json";
     }
 
     protected void loadPage() {
@@ -110,8 +117,9 @@ public class Live2dStage extends BaseOverlay implements PetHost {
         }
         debug("本地资源服务器: 127.0.0.1:" + port);
         String base = "http://127.0.0.1:" + port + "/index.html";
-        String m = customModelUrl();
-        String url = (m == null) ? base : base + "?model=" + Uri.encode(m);
+        String custom = customModelUrl();
+        String modelPath = (custom != null) ? Uri.encode(custom) : builtinModelPath();
+        String url = base + "?model=" + modelPath;
         webView.loadUrl(url);
     }
 

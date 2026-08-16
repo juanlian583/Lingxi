@@ -17,14 +17,14 @@
 | 👆 单击互动 | 随机挥手 / 跳跃 / 点头，并弹出气泡说话 |
 | 💗 双击摸头 | 播放跳跃动画 + 爱心特效 + 语音撒娇 |
 | 🐳 AI 对话 | OpenAI 兼容接口（默认 DeepSeek API），悬浮窗内直接聊天，回复带气泡 + 语音朗读 |
-| 🎨 Live2D 动画 | 默认内置 Live2D 官方示例模型 Haru（蓝发少女），骨骼动画 60fps；也支持自定义 model3.json URL 换模型 |
+| 🎨 Live2D 动画 | 内置 Haru（蓝发少女）+ 白兮 Baixi（VTS 模型）双模型可切换，骨骼动画 60fps；支持自定义 model3.json URL |
 | 🎞️ 双风格切换 | Live2D 灵动（默认）/ DeepSeek娘 经典像素精灵图，一键切换 |
 | 📏 可调大小 | 100~300dp 滑块调节 |
 | 🔔 开机自启 | 开机后自动把灵汐放回桌面 |
 
 ## 🎭 形象资源
 
-默认使用 **Live2D 骨骼动画**（内置 Live2D 官方示例模型 Haru，宽松许可），并保留社区二创的 **DeepSeek娘（蓝发鲸鱼女仆）** 精灵图作为「经典像素」风格，来自开源同人项目 [xpy12367/codex-pet-DeepSeek-girl](https://github.com/xpy12367/codex-pet-DeepSeek-girl)（1536×2288，8×11 精灵图，9 组动画 + 16 方向注视）。
+默认使用 **Live2D 骨骼动画**，内置两款模型：**Haru**（Live2D 官方示例·蓝发少女，宽松许可）与 **白兮 Baixi**（VTS 模型），可在设置中切换，也支持自定义 model3.json URL，并保留社区二创的 **DeepSeek娘（蓝发鲸鱼女仆）** 精灵图作为「经典像素」风格，来自开源同人项目 [xpy12367/codex-pet-DeepSeek-girl](https://github.com/xpy12367/codex-pet-DeepSeek-girl)（1536×2288，8×11 精灵图，9 组动画 + 16 方向注视）。
 
 - 首次联网启动时可在应用内点击「下载/更新形象」从网上拉取最新资源；
 - 应用同时内置了一份离线备份，无网络也能正常使用；
@@ -47,7 +47,7 @@
 
 ### 方式一：直接用发布包
 
-`dist/lingxi-v1.2.apk` 是已签名可直接安装的 APK（侧载安装，开启「允许安装未知来源」）。
+`dist/lingxi-v1.5.1.apk` 是已签名可直接安装的 APK（侧载安装，开启「允许安装未知来源」）。
 
 ### 方式二：Android Studio
 

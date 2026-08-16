@@ -1,5 +1,6 @@
 /* 灵汐 Live2D 渲染层：pixi-live2d-display(Cubism4) 驱动，60fps 骨骼动画
-   运行日志通过 console.log 上报给原生层（复制诊断日志功能），不在页面显示 */
+   支持两种模型：Haru（内置动作）与 Baixi 白兮（无内置动作，程序化动画）
+   运行日志通过 console.log 上报给原生层（复制诊断日志功能） */
 (function () {
     'use strict';
 
@@ -25,30 +26,96 @@
     }
 
     dbgLine('页面已加载: ' + location.href);
-    dbgLine('视口尺寸: ' +
-            Math.max(document.documentElement.clientWidth, window.innerWidth) + 'x' +
-            Math.max(document.documentElement.clientHeight, window.innerHeight) +
-            ' dpr=' + (window.devicePixelRatio || 1));
-    dbgLine('pixi: ' + (window.PIXI ? PIXI.VERSION : '未加载 ❌'));
-    dbgLine('live2d-display: ' +
-            (window.PIXI && PIXI.live2d && PIXI.live2d.Live2DModel ? '已加载 ✅' : '未加载 ❌'));
-    dbgLine('cubism core: ' + (window.Live2DCubismCore ? '已加载 ✅' : '未加载 ❌'));
     dbgLine('目标模型: ' + MODEL);
 
-    // 显式测试模型文件能否拉取（诊断用）
-    try {
-        fetch(MODEL).then(function (r) {
-            dbgLine('fetch 模型 -> HTTP ' + r.status);
-            return r.text().then(function (txt) {
-                dbgLine('model3.json 字节数: ' + txt.length +
-                        (txt.indexOf('FileReferences') >= 0 ? '（格式正确）' : '（格式异常!）'));
-            });
-        }).catch(function (e) {
-            dbgLine('fetch 模型失败 ❌: ' + e.message);
-        });
-    } catch (e) {
-        dbgLine('fetch 调用异常: ' + e.message);
+    // ---------- 程序化参数动画（无内置动作的模型使用） ----------
+
+    var tweens = [];
+
+    function setParam(id, v) {
+        try { model.internalModel.coreModel.setParameterValueById(id, v, 1.0); } catch (e) {}
     }
+
+    function animParam(id, from, to, dur, delay) {
+        if (!model) return;
+        setParam(id, from);
+        tweens.push({
+            id: id, from: from, to: to,
+            dur: dur || 500,
+            start: Date.now() + (delay || 0)
+        });
+    }
+
+    function initTweener() {
+        if (!app || !model) return;
+        app.ticker.add(function () {
+            var now = Date.now();
+            for (var i = tweens.length - 1; i >= 0; i--) {
+                var t = tweens[i];
+                if (now < t.start) continue;
+                var p = Math.min(1, (now - t.start) / t.dur);
+                var e = 1 - (1 - p) * (1 - p); // easeOut
+                setParam(t.id, t.from + (t.to - t.from) * e);
+                if (p >= 1) tweens.splice(i, 1);
+            }
+        });
+    }
+
+    function hasMotions() {
+        try {
+            var defs = model.internalModel.motionManager.definitions;
+            return !!(defs && defs.length);
+        } catch (e) { return false; }
+    }
+
+    // 歪头打招呼
+    function procTap() {
+        animParam('ParamAngleZ', 0, 18, 220);
+        animParam('ParamAngleZ', 18, -10, 260, 240);
+        animParam('ParamAngleZ', -10, 0, 220, 520);
+        animParam('ParamBodyAngleZ', 0, 8, 220);
+        animParam('ParamBodyAngleZ', 8, 0, 400, 300);
+    }
+
+    // 开心弹跳
+    function procPat() {
+        animParam('ParamBodyAngleZ', 0, -10, 150);
+        animParam('ParamBodyAngleZ', -10, 12, 250, 160);
+        animParam('ParamBodyAngleZ', 12, 0, 250, 420);
+        animParam('ParamAngleZ', 0, 12, 150);
+        animParam('ParamAngleZ', 12, -8, 250, 160);
+        animParam('ParamAngleZ', -8, 0, 250, 420);
+        animParam('ParamMouthOpenY', 0, 0.6, 120);
+        animParam('ParamMouthOpenY', 0.6, 0, 300, 150);
+    }
+
+    // 歪头思考
+    function procThink() {
+        animParam('ParamAngleZ', 0, 14, 400);
+        animParam('ParamEyeLOpen', 1, 0.6, 300);
+    }
+
+    // 点头 / 摇头
+    function procReply(ok) {
+        if (ok) {
+            animParam('ParamAngleX', 0, 14, 180);
+            animParam('ParamAngleX', 14, 0, 300, 200);
+        } else {
+            animParam('ParamAngleX', 0, -16, 150);
+            animParam('ParamAngleX', -16, 16, 250, 150);
+            animParam('ParamAngleX', 16, -12, 250, 400);
+            animParam('ParamAngleX', -12, 0, 250, 650);
+        }
+    }
+
+    // 待机轻摆
+    function procIdleSway() {
+        animParam('ParamAngleZ', 0, 6, 800);
+        animParam('ParamAngleZ', 6, -6, 1600, 900);
+        animParam('ParamAngleZ', -6, 0, 800, 2600);
+    }
+
+    // ---------- 加载与适配 ----------
 
     function fit() {
         if (!model || !app) return;
@@ -98,9 +165,10 @@
             }
             dbgLine('开始加载模型: ' + MODEL);
             model = await PIXI.live2d.Live2DModel.from(MODEL, { autoInteract: false });
-            dbgLine('模型加载成功 ✅');
+            dbgLine('模型加载成功 ✅ 动作: ' + (hasMotions() ? '内置动作' : '程序化动画'));
             app.stage.addChild(model);
             fit();
+            initTweener();
             // 视口尺寸可能晚于模型就绪，前 10 秒持续校准
             var n = 0;
             var fitTimer = setInterval(function () {
@@ -130,7 +198,11 @@
     function scheduleIdle() {
         setInterval(function () {
             if (!model || !ready) return;
-            safe(function () { model.motion('Idle'); });
+            if (hasMotions()) {
+                safe(function () { model.motion('Idle'); });
+            } else {
+                procIdleSway();
+            }
         }, 9000);
     }
 
@@ -152,23 +224,37 @@
             if (bubbleEl) bubbleEl.style.display = 'none';
         },
         motion: function (name) { safe(function () { if (model) model.motion(name); }); },
-        randomMotion: function () { safe(function () { if (model) model.motion('TapBody'); }); },
+        randomMotion: function () {
+            if (!model || !ready) return;
+            if (hasMotions()) safe(function () { model.motion('TapBody'); });
+            else procTap();
+        },
         pat: function () {
-            safe(function () {
-                if (model) {
+            if (!model || !ready) return;
+            if (hasMotions()) {
+                safe(function () {
                     model.motion('TapBody');
                     try { model.expression('F01'); } catch (e) {}
-                }
-            });
+                });
+            } else {
+                procPat();
+            }
         },
-        think: function () { safe(function () { if (model) model.motion('Idle'); }); },
+        think: function () {
+            if (!model || !ready) return;
+            if (hasMotions()) safe(function () { model.motion('Idle'); });
+            else procThink();
+        },
         reply: function (ok) {
-            safe(function () {
-                if (model) {
+            if (!model || !ready) return;
+            if (hasMotions()) {
+                safe(function () {
                     model.motion('TapBody');
                     try { model.expression(ok ? 'F03' : 'F08'); } catch (e) {}
-                }
-            });
+                });
+            } else {
+                procReply(ok);
+            }
         }
     };
 

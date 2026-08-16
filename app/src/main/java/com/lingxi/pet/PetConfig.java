@@ -65,9 +65,15 @@ public final class PetConfig {
     public static void setPetStyle(Context c, String v) { sp(c).edit().putString("pet_style", v).apply(); }
     public static boolean live2dMode(Context c) { return STYLE_LIVE2D.equals(petStyle(c)); }
 
-    /** 自定义 Live2D 模型 model3.json URL（为空使用内置 Haru） */
+    /** 自定义 Live2D 模型 model3.json URL（为空用内置模型） */
     public static String live2dModelUrl(Context c) { return sp(c).getString("live2d_model_url", ""); }
     public static void setLive2dModelUrl(Context c, String v) { sp(c).edit().putString("live2d_model_url", v).apply(); }
+
+    /** 内置 Live2D 模型选择：haru（默认）/ baixi（白兮 VTS） */
+    public static final String MODEL_HARU = "haru";
+    public static final String MODEL_BAIXI = "baixi";
+    public static String live2dModel(Context c) { return sp(c).getString("live2d_model", MODEL_HARU); }
+    public static void setLive2dModel(Context c, String v) { sp(c).edit().putString("live2d_model", v).apply(); }
 
     private PetConfig() {}
 }

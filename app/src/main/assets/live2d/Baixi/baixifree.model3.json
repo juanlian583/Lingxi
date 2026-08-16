@@ -1,0 +1,27 @@
+{
+ "Version": 3,
+ "FileReferences": {
+  "Moc": "baixifree.moc3",
+  "Textures": [
+   "baixifree.4096/texture_00.webp",
+   "baixifree.4096/texture_01.webp"
+  ],
+  "Physics": "baixifree.physics3.json",
+  "DisplayInfo": "baixifree.cdi3.json"
+ },
+ "Groups": [
+  {
+   "Target": "Parameter",
+   "Name": "EyeBlink",
+   "Ids": [
+    "ParamEyeLOpen",
+    "ParamEyeROpen"
+   ]
+  },
+  {
+   "Target": "Parameter",
+   "Name": "LipSync",
+   "Ids": []
+  }
+ ]
+}

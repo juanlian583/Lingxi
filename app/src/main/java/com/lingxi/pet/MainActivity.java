@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
     private EditText etChat, etBase, etKey, etModel, etPrompt, etSprite, etModelUrl;
     private TextView tvChatReply, tvSpriteStatus, tvPetInfo, tvSizeLabel;
     private SeekBar seekSize;
-    private Spinner spStyle;
+    private Spinner spStyle, spModel;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
         bindViews();
         loadConfigIntoUi();
         setupStyleSpinner();
+        setupModelSpinner();
         setupListeners();
         buildPreview();
         showPetInfo();
@@ -72,6 +73,7 @@ public class MainActivity extends Activity {
         tvSizeLabel = findViewById(R.id.tv_size_label);
         seekSize = findViewById(R.id.seek_pet_size);
         spStyle = findViewById(R.id.sp_style);
+        spModel = findViewById(R.id.sp_model);
     }
 
     private void loadConfigIntoUi() {
@@ -103,6 +105,27 @@ public class MainActivity extends Activity {
                 if (!ready[0]) { ready[0] = true; return; }
                 String style = (position == 0) ? PetConfig.STYLE_LIVE2D : PetConfig.STYLE_SPRITE;
                 PetConfig.setPetStyle(MainActivity.this, style);
+                buildPreview();
+                restartPetService();
+                showPetInfo();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+    }
+
+    private void setupModelSpinner() {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item,
+                new String[]{"Haru（内置·蓝发少女）", "白兮 Baixi（内置·VTS 模型）"});
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spModel.setAdapter(adapter);
+        spModel.setSelection(PetConfig.MODEL_BAIXI.equals(PetConfig.live2dModel(this)) ? 1 : 0);
+        final boolean[] ready = {false};
+        spModel.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (!ready[0]) { ready[0] = true; return; }
+                String m = (position == 1) ? PetConfig.MODEL_BAIXI : PetConfig.MODEL_HARU;
+                PetConfig.setLive2dModel(MainActivity.this, m);
                 buildPreview();
                 restartPetService();
                 showPetInfo();
@@ -225,7 +248,12 @@ public class MainActivity extends Activity {
 
     private void showPetInfo() {
         if (PetConfig.live2dMode(this)) {
-            tvPetInfo.setText("当前风格：Live2D 灵动 · 内置模型 Haru（Live2D 官方示例·蓝发少女）");
+            String modelName = PetConfig.MODEL_BAIXI.equals(PetConfig.live2dModel(this))
+                    ? "白兮 Baixi（VTS 模型）"
+                    : "Haru（Live2D 官方示例·蓝发少女）";
+            String custom = PetConfig.live2dModelUrl(this);
+            String suffix = custom.isEmpty() ? "" : " · 自定义: " + custom;
+            tvPetInfo.setText("当前风格：Live2D 灵动 · 模型：" + modelName + suffix);
             return;
         }
         try (InputStream is = getAssets().open("pet.json")) {

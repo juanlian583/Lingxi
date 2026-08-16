@@ -176,11 +176,15 @@ public class PetService extends Service {
     // ---------------- 聊天 + AI ----------------
 
     private void openChat() {
-        if (chatDialog != null && chatDialog.isShowing()) return;
-        chatDialog = new ChatDialog(this, new ChatDialog.Callback() {
-            @Override public void onSend(String text) { askAi(text); }
-        });
-        chatDialog.show();
+        try {
+            if (chatDialog != null && chatDialog.isShowing()) return;
+            chatDialog = new ChatDialog(this, new ChatDialog.Callback() {
+                @Override public void onSend(String text) { askAi(text); }
+            });
+            chatDialog.show();
+        } catch (Exception e) {
+            LingxiDiagnostics.append("openChat 异常: " + e);
+        }
     }
 
     private void askAi(final String text) {
@@ -263,6 +267,7 @@ public class PetService extends Service {
         }
         SpeechHelper.shutdown();
         stopForeground(true);
+        LingxiDiagnostics.markCleanExit();
         super.onDestroy();
     }
 

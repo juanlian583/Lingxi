@@ -147,14 +147,29 @@ public class Live2dStage extends BaseOverlay implements PetHost {
 
     private class JsBridge {
         @JavascriptInterface public void onReady() {
-            debug("JS 桥接: 渲染就绪");
+            postMain(new Runnable() {
+                @Override public void run() { debug("JS 桥接: 渲染就绪"); }
+            });
         }
         @JavascriptInterface public void onBubbleClick() {
-            onBubbleClicked();
+            // JS 桥在 WebView 后台线程调用，必须切回主线程再做 UI/弹窗操作，
+            // 否则 Dialog.show() 等会抛异常直接杀死应用
+            postMain(new Runnable() {
+                @Override public void run() { onBubbleClicked(); }
+            });
         }
         @JavascriptInterface public void onError(String message) {
-            debug("❌ JS: " + message);
+            final String m = message;
+            postMain(new Runnable() {
+                @Override public void run() { debug("❌ JS: " + m); }
+            });
         }
+    }
+
+    private void postMain(Runnable r) {
+        try {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(r);
+        } catch (Exception ignored) {}
     }
 
     // ---------------- PetHost ----------------

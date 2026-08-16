@@ -395,6 +395,11 @@ public class MainActivity extends Activity {
         }
     }
 
+    @Override protected void onDestroy() {
+        LingxiDiagnostics.markCleanExit();
+        super.onDestroy();
+    }
+
     @Override protected void onResume() {
         super.onResume();
         boolean shouldBeOn = PetConfig.overlayEnabled(this) && Settings.canDrawOverlays(this);

@@ -9,25 +9,39 @@
     var canvas = document.getElementById('canvas');
     var bubbleEl = document.getElementById('bubble');
     var bubbleTimer = null;
+    var failed = false;
 
     function log(msg) {
         try { console.log('[lingxi] ' + msg); } catch (e) {}
     }
 
+    function reportError(msg) {
+        try {
+            if (window.LingxiNative && window.LingxiNative.onError) {
+                window.LingxiNative.onError(String(msg).slice(0, 300));
+            }
+        } catch (e) {}
+        log('err: ' + msg);
+    }
+
     function fit() {
         if (!model || !app) return;
-        var w = window.innerWidth;
-        var h = window.innerHeight;
-        app.renderer.resize(w, h);
-        var s = Math.min(w / model.width, h / model.height);
-        model.scale.set(s);
-        model.x = w / 2;
-        model.y = h;
-        model.anchor.set(0.5, 1.0);
+        try {
+            var w = window.innerWidth;
+            var h = window.innerHeight;
+            app.renderer.resize(w, h);
+            var mw = (model.internalModel && model.internalModel.width) || 1024;
+            var mh = (model.internalModel && model.internalModel.height) || 1024;
+            var s = Math.min(w / mw, h / mh);
+            model.scale.set(s);
+            model.x = w / 2;
+            model.y = h;
+            model.anchor.set(0.5, 1.0);
+        } catch (e) { reportError('fit: ' + e.message); }
     }
 
     function safe(fn) {
-        try { fn(); } catch (e) { log('err: ' + e.message); }
+        try { fn(); } catch (e) { reportError(e.message); }
     }
 
     function showBubble(text, ms) {
@@ -36,6 +50,14 @@
         bubbleEl.style.display = 'block';
         if (bubbleTimer) clearTimeout(bubbleTimer);
         bubbleTimer = setTimeout(function () { bubbleEl.style.display = 'none'; }, ms || 4000);
+    }
+
+    function showFail() {
+        failed = true;
+        if (bubbleEl) {
+            bubbleEl.textContent = '😢 模型加载失败，请检查网络或模型地址';
+            bubbleEl.style.display = 'block';
+        }
     }
 
     async function boot() {
@@ -49,7 +71,8 @@
                 resolution: window.devicePixelRatio || 1
             });
             if (!PIXI.live2d || !PIXI.live2d.Live2DModel) {
-                log('pixi-live2d-display 未加载');
+                reportError('pixi-live2d-display 未加载');
+                showFail();
                 return;
             }
             if (PIXI.live2d.Live2DModel.registerTicker) {
@@ -66,12 +89,15 @@
             }
             scheduleIdle();
         } catch (e) {
-            log('Live2D 启动失败: ' + (e && e.message));
+            reportError('Live2D 启动失败: ' + (e && e.message));
             // 自定义模型加载失败时回退到内置模型
             if (MODEL !== 'Haru/Haru.model3.json') {
                 MODEL = 'Haru/Haru.model3.json';
                 log('回退到内置模型');
+                try { if (app) { app.destroy(true); app = null; model = null; } } catch (e2) {}
                 boot();
+            } else {
+                showFail();
             }
         }
     }

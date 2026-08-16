@@ -79,7 +79,13 @@ public class Live2dStage extends BaseOverlay implements PetHost {
     }
 
     protected void loadPage() {
-        String base = "file:///android_asset/live2d/index.html";
+        // 用本地 HTTP 服务器提供资源：现代 WebView 禁止 file:// 页面 XHR 加载 file:// 资源
+        int port = LocalAssetServer.get(getContext()).ensureStarted();
+        if (port <= 0) {
+            Log.e(TAG, "本地资源服务器启动失败");
+            return;
+        }
+        String base = "http://127.0.0.1:" + port + "/index.html";
         String m = customModelUrl();
         String url = (m == null) ? base : base + "?model=" + Uri.encode(m);
         webView.loadUrl(url);
@@ -107,6 +113,9 @@ public class Live2dStage extends BaseOverlay implements PetHost {
         }
         @JavascriptInterface public void onBubbleClick() {
             onBubbleClicked();
+        }
+        @JavascriptInterface public void onError(String message) {
+            Log.e(TAG, "JS error: " + message);
         }
     }
 

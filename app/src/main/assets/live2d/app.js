@@ -32,8 +32,15 @@
 
     var tweens = [];
 
+    var paramValues = {};
+
     function setParam(id, v) {
+        paramValues[id] = v;
         try { model.internalModel.coreModel.setParameterValueById(id, v, 1.0); } catch (e) {}
+    }
+
+    function getParam(id, fallback) {
+        return (id in paramValues) ? paramValues[id] : fallback;
     }
 
     function animParam(id, from, to, dur, delay) {
@@ -160,10 +167,12 @@
         animParam('ParamMouthOpenY', 0.6, 0, 300, 150);
     }
 
-    // 歪头思考
+    // 歪头思考（结束自动归位）
     function procThink() {
         animParam('ParamAngleZ', 0, 14, 400);
+        animParam('ParamAngleZ', 14, 0, 500, 600);
         animParam('ParamEyeLOpen', 1, 0.6, 300);
+        animParam('ParamEyeLOpen', 0.6, 1, 400, 800);
     }
 
     // 点头 / 摇头
@@ -184,6 +193,39 @@
         animParam('ParamAngleZ', 0, 6, 800);
         animParam('ParamAngleZ', 6, -6, 1600, 900);
         animParam('ParamAngleZ', -6, 0, 800, 2600);
+    }
+
+    /* 动作结束后：把所有动作参数平滑回归默认，再播放一次待机摇摆 */
+    var returnTimer = null;
+
+    function returnToIdle() {
+        if (!model || !ready) return;
+        var defaults = {
+            ParamAngleX: 0, ParamAngleY: 0, ParamAngleZ: 0,
+            ParamBodyAngleX: 0, ParamBodyAngleY: 0, ParamBodyAngleZ: 0,
+            ParamEyeLOpen: 1, ParamEyeROpen: 1,
+            ParamMouthOpenY: 0, ParamJawOpen: 0
+        };
+        var i = 0;
+        var touched = 0;
+        for (var id in defaults) {
+            if (!defaults.hasOwnProperty(id)) continue;
+            var from = getParam(id, defaults[id]);
+            if (Math.abs(from - defaults[id]) > 0.01) {
+                animParam(id, from, defaults[id], 450, i * 40);
+                touched++;
+                i++;
+            }
+        }
+        if (touched > 0) dbgLine('回归待机: ' + touched + ' 个参数归位');
+        setTimeout(function () {
+            if (ready && model) procIdleSway();
+        }, 700 + i * 40);
+    }
+
+    function scheduleReturnToIdle(delayMs) {
+        if (returnTimer) clearTimeout(returnTimer);
+        returnTimer = setTimeout(function () { returnToIdle(); }, delayMs || 3500);
     }
 
     // ---------- 加载与适配 ----------
@@ -304,6 +346,7 @@
             else procTap();
             applyExpression('quanquan');
             resetExpressionSoon();
+            scheduleReturnToIdle(2500);
         },
         pat: function () {
             if (!model || !ready) return;
@@ -317,6 +360,7 @@
             }
             applyExpression('eyeclose');
             resetExpressionSoon();
+            scheduleReturnToIdle(2500);
         },
         think: function () {
             if (!model || !ready) return;
@@ -324,6 +368,7 @@
             else procThink();
             applyExpression('quanquan');
             resetExpressionSoon(4500);
+            scheduleReturnToIdle(6000);
         },
         reply: function (ok) {
             if (!model || !ready) return;
@@ -337,6 +382,7 @@
             }
             applyExpression(ok ? 'eyeclose' : 'tears');
             resetExpressionSoon();
+            scheduleReturnToIdle(3000);
         }
     };
 

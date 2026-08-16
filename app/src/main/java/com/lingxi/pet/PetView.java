@@ -47,6 +47,7 @@ public class PetView extends View {
     private final Random random = new Random();
     private final GestureDetector gesture;
     private final int touchSlop;
+    private final android.graphics.Rect petRect = new android.graphics.Rect();
 
     private float downX, downY;
     private boolean dragging = false;
@@ -80,12 +81,19 @@ public class PetView extends View {
             }
         });
         sheet = PetResources.load(c);
-        animator = new PetAnimator(sheet, new Runnable() {
-            @Override public void run() {
-                tickHearts();
-                invalidate();
-            }
-        });
+        animator = new PetAnimator(sheet,
+                new Runnable() {
+                    @Override public void run() {
+                        // 每帧(vsync)：更新爱心特效，有爱心时持续重绘
+                        tickHearts();
+                        if (!hearts.isEmpty()) postInvalidateOnAnimation();
+                    }
+                },
+                new Runnable() {
+                    @Override public void run() {
+                        postInvalidateOnAnimation();
+                    }
+                });
         animator.start();
     }
 
@@ -133,8 +141,8 @@ public class PetView extends View {
         int ph = (int) (PetAnimator.CELL_H * scale);
         int left = (w - pw) / 2;
         int top = h - ph;
-        android.graphics.Rect dst = new android.graphics.Rect(left, top, left + pw, top + ph);
-        animator.draw(c, dst);
+        petRect.set(left, top, left + pw, top + ph);
+        animator.draw(c, petRect);
 
         // 爱心
         long now = System.currentTimeMillis();

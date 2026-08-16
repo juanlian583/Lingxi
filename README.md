@@ -46,7 +46,7 @@
 
 ### 方式一：直接用发布包
 
-`dist/lingxi-v1.0.apk` 是已签名可直接安装的 APK（侧载安装，开启「允许安装未知来源」）。
+`dist/lingxi-v1.1.apk` 是已签名可直接安装的 APK（侧载安装，开启「允许安装未知来源」）。
 
 ### 方式二：Android Studio
 
@@ -59,7 +59,7 @@
 
 ```bash
 ./build-tools/build.sh
-# 产物：dist/lingxi-v1.0.apk
+# 产物：dist/lingxi-v1.1.apk
 ```
 
 ## 🗂️ 项目结构

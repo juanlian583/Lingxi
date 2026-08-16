@@ -111,6 +111,7 @@ public class Live2dStage extends BaseOverlay implements PetHost {
 
     private void debug(String msg) {
         Log.d(TAG, msg);
+        LingxiDiagnostics.append(msg);
         if (debugView == null) return;
         debugCount++;
         String line = debugCount + ". " + msg;

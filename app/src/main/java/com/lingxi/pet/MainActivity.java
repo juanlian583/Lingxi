@@ -44,6 +44,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        LingxiDiagnostics.clear();
         setContentView(R.layout.activity_main);
         bindViews();
         loadConfigIntoUi();
@@ -190,6 +191,26 @@ public class MainActivity extends Activity {
         });
 
         findViewById(R.id.btn_sprite_download).setOnClickListener(v -> downloadSprite());
+        findViewById(R.id.btn_copy_log).setOnClickListener(v -> showDiagnostics());
+    }
+
+    private void showDiagnostics() {
+        final String report = LingxiDiagnostics.buildReport(this);
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        final TextView tv = new TextView(this);
+        tv.setText(report);
+        tv.setTextSize(11);
+        tv.setTypeface(android.graphics.Typeface.MONOSPACE);
+        tv.setTextIsSelectable(true);
+        int pad = Math.round(getResources().getDisplayMetrics().density * 14);
+        tv.setPadding(pad, pad, pad, pad);
+        sv.addView(tv);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("📋 诊断日志（可截图或复制）")
+                .setView(sv)
+                .setPositiveButton("复制到剪贴板", (d, w) -> LingxiDiagnostics.copy(this))
+                .setNegativeButton("关闭", null)
+                .show();
     }
 
     private void watch(EditText et, final java.util.function.Consumer<String> saver) {

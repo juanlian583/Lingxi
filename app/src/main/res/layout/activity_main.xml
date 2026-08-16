@@ -338,6 +338,16 @@
                     android:textColor="#8A94B0"
                     android:textSize="12sp" />
             </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_copy_log"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/btn_primary"
+                android:text="📋 复制诊断日志（发给作者）"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
         </LinearLayout>
 
         <!-- 其他 -->
@@ -428,7 +438,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:gravity="center"
-            android:text="灵汐 v1.3.1 · 非官方 DeepSeek 二创桌宠\n形象素材来自 codex-pet-DeepSeek-girl 开源同人项目"
+            android:text="灵汐 v1.3.2 · 非官方 DeepSeek 二创桌宠\n形象素材来自 codex-pet-DeepSeek-girl 开源同人项目"
             android:textColor="#B8C2DC"
             android:textSize="11sp" />
     </LinearLayout>

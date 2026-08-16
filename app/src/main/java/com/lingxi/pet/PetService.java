@@ -144,12 +144,13 @@ public class PetService extends Service {
     }
 
     private void showMenu() {
-        String[] items = {"和灵汐聊天", "打开设置", "隐藏桌宠"};
+        String[] items = {"和灵汐聊天", "复制诊断日志", "打开设置", "隐藏桌宠"};
         android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this)
                 .setTitle("灵汐菜单")
                 .setItems(items, (d, w) -> {
                     if (w == 0) openChat();
-                    else if (w == 1) {
+                    else if (w == 1) LingxiDiagnostics.copy(this);
+                    else if (w == 2) {
                         Intent i = new Intent(this, MainActivity.class);
                         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(i);

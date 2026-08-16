@@ -104,7 +104,7 @@
         catch (e) { return fallback; }
     }
 
-    /* 完全自主的表情管理：读当前值 -> tween 到表情值 -> 保持 -> tween 回原值（回归待机表情） */
+    /* 表情管理：库 API 应用（可见）+ 库级恢复（回中立）+ 参数 tween 双保险 */
     var exprResetTimer = null;
     var activeExprParams = null;
 
@@ -112,6 +112,20 @@
         if (!model) return;
         var defs = getExpressionDefs();
         var file = findExpressionFile(nameLike, defs);
+        // 1) 库 API 应用表情（混合效果可见）
+        if (defs && defs.length) {
+            for (var i = 0; i < defs.length; i++) {
+                var n = ((defs[i].Name || '') + ' ' + (defs[i].File || ''));
+                if (n.indexOf(nameLike) >= 0) {
+                    try {
+                        model.expression(defs[i].Name);
+                        dbgLine('表情(库API): ' + defs[i].Name);
+                    } catch (e) { reportError('expression: ' + e.message); }
+                    break;
+                }
+            }
+        }
+        // 2) 直接参数双保险（tween 进）
         if (!file) return;
         var base = MODEL.indexOf('/') >= 0 ? MODEL.substring(0, MODEL.lastIndexOf('/')) : '';
         fetch((base ? base + '/' : '') + file).then(function (r) { return r.json(); })
@@ -129,15 +143,20 @@
                         animParam(p.Id, init, p.Value, 250);
                     });
                     activeExprParams = list;
-                    dbgLine('表情(自主): ' + file + ' -> ' + params.length + ' 个参数');
+                    dbgLine('表情参数(双保险): ' + file + ' -> ' + params.length + ' 个参数');
+                    // 保持后恢复：库级 resetExpression + 参数 tween 回原值
                     exprResetTimer = setTimeout(function () {
+                        try {
+                            model.internalModel.motionManager.expressionManager.resetExpression();
+                            dbgLine('表情已回归待机(库reset)');
+                        } catch (e) { reportError('resetExpression: ' + e.message); }
                         var l = activeExprParams;
                         activeExprParams = null;
                         if (l && l.length) {
                             l.forEach(function (e) {
                                 animParam(e.id, getParamValue(e.id, e.initial), e.initial, 350);
                             });
-                            dbgLine('表情已回归待机: ' + l.length + ' 个参数');
+                            dbgLine('表情参数已回归: ' + l.length + ' 个');
                         }
                     }, holdMs || 1600);
                 } catch (e2) { reportError('表情应用异常: ' + e2.message); }
@@ -343,14 +362,14 @@
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('TapBody'); });
             else procTap();
-            applyExpression(hasMotions ? 'F01' : 'quanquan', 1600);
+            applyExpression(hasMotions() ? 'F01' : 'quanquan', 1600);
             scheduleReturnToIdle(2500);
         },
         pat: function () {
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('TapBody'); });
             else procPat();
-            applyExpression(hasMotions ? 'F01' : 'eyeclose', 1600);
+            applyExpression(hasMotions() ? 'F01' : 'eyeclose', 1600);
             scheduleReturnToIdle(2500);
         },
         think: function () {
@@ -364,7 +383,7 @@
             if (!model || !ready) return;
             if (hasMotions()) safe(function () { model.motion('TapBody'); });
             else procReply(ok);
-            applyExpression(hasMotions ? (ok ? 'F03' : 'F08') : (ok ? 'eyeclose' : 'tears'), 1600);
+            applyExpression(hasMotions() ? (ok ? 'F03' : 'F08') : (ok ? 'eyeclose' : 'tears'), 1600);
             scheduleReturnToIdle(3000);
         }
     };

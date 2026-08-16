@@ -154,7 +154,10 @@
             model.x = w / 2;
             model.y = h;
             model.anchor.set(0.5, 1.0);
-            dbgLine('适配: 模型 ' + mw + 'x' + mh + ' scale=' + s.toFixed(3));
+            if (s.toFixed(3) !== (window.__lastScale || '')) {
+                window.__lastScale = s.toFixed(3);
+                dbgLine('适配: 模型 ' + mw + 'x' + mh + ' scale=' + s.toFixed(3));
+            }
         } catch (e) { reportError('fit 异常: ' + e.message); }
     }
 

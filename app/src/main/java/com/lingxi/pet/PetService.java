@@ -152,6 +152,14 @@ public class PetService extends Service {
     }
 
     private void showMenu() {
+        try {
+            showMenuInner();
+        } catch (Exception e) {
+            LingxiDiagnostics.append("showMenu 异常: " + e);
+        }
+    }
+
+    private void showMenuInner() {
         String[] items = {"和灵汐聊天", "复制诊断日志", "打开设置", "隐藏桌宠"};
         android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this)
                 .setTitle("灵汐菜单")

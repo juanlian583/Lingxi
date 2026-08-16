@@ -60,12 +60,8 @@ public final class LingxiDiagnostics {
     public static synchronized String getLog() { return log.toString(); }
 
     public static synchronized void clear() {
+        // 只清内存缓冲，保留持久化文件（崩溃前的日志要留给下次诊断）
         log.setLength(0);
-        if (appContext != null) {
-            try {
-                new File(appContext.getFilesDir(), "lingxi_diag.log").delete();
-            } catch (Exception ignored) {}
-        }
     }
 
     private static void writeFile(String line) {
@@ -111,20 +107,23 @@ public final class LingxiDiagnostics {
                 if (appContext == null) return "";
                 File f = new File(appContext.getFilesDir(), "lingxi_diag.log");
                 if (!f.exists()) return "";
-                StringBuilder sb = new StringBuilder();
+                // 按会话标记切分：prev = 上一个完整会话，cur = 当前运行中的会话
+                StringBuilder prev = new StringBuilder();
+                StringBuilder cur = new StringBuilder();
                 try (BufferedReader r = new BufferedReader(new InputStreamReader(
                         new FileInputStream(f), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = r.readLine()) != null) {
                         if (line.startsWith(SESSION_MARK)) {
-                            sb.setLength(0); // 只保留最后一段（当前会话由内存日志覆盖）
+                            prev = cur;
+                            cur = new StringBuilder();
                         }
-                        sb.append(line).append('\n');
+                        cur.append(line).append('\n');
                     }
                 }
-                String s = sb.toString().trim();
+                String s = prev.toString().trim();
                 if (s.isEmpty()) return "";
-                boolean clean = s.endsWith(CLEAN_MARK) || s.contains(CLEAN_MARK);
+                boolean clean = s.contains(CLEAN_MARK);
                 String tail = tail(s, 100);
                 return (clean ? "" : "⚠️ 上次会话异常终止（可能崩溃/被杀）\n") + tail;
             } catch (Exception e) {

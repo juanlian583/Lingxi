@@ -1,0 +1,4 @@
+// 灵汐 Lingxi — 桌面 AI 桌宠
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}

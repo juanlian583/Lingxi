@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- 仅允许对本机本地资源服务器使用明文 http，其余流量保持 https-only -->
+    <!-- 诊断版：放行本机回环地址明文流量（Live2D 本地资源服务器） -->
+    <base-config cleartextTrafficPermitted="true" />
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">127.0.0.1</domain>
         <domain includeSubdomains="false">localhost</domain>

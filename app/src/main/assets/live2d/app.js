@@ -1,7 +1,9 @@
-/* 灵汐 Live2D 渲染层：pixi-live2d-display 驱动，60fps 骨骼动画 */
+/* 灵汐 Live2D 渲染层：pixi-live2d-display 驱动，60fps 骨骼动画
+   本版本带屏上诊断面板：每一步加载状态直接显示在页面上 */
 (function () {
     'use strict';
 
+    var dbg = document.getElementById('debug');
     var params = new URLSearchParams(location.search);
     var MODEL = params.get('model') || 'Haru/Haru.model3.json';
 
@@ -9,26 +11,68 @@
     var canvas = document.getElementById('canvas');
     var bubbleEl = document.getElementById('bubble');
     var bubbleTimer = null;
-    var failed = false;
 
-    function log(msg) {
+    function dbgLine(msg) {
+        try {
+            var d = document.createElement('div');
+            d.textContent = '[' + new Date().toTimeString().slice(0, 8) + '] ' + msg;
+            dbg.appendChild(d);
+            dbg.scrollTop = dbg.scrollHeight;
+        } catch (e) {}
         try { console.log('[lingxi] ' + msg); } catch (e) {}
     }
 
     function reportError(msg) {
+        dbgLine('❌ ' + msg);
         try {
             if (window.LingxiNative && window.LingxiNative.onError) {
                 window.LingxiNative.onError(String(msg).slice(0, 300));
             }
         } catch (e) {}
-        log('err: ' + msg);
+    }
+
+    dbgLine('页面已加载: ' + location.href);
+    dbgLine('视口尺寸: ' +
+            Math.max(document.documentElement.clientWidth, window.innerWidth) + 'x' +
+            Math.max(document.documentElement.clientHeight, window.innerHeight) +
+            ' dpr=' + (window.devicePixelRatio || 1));
+    dbgLine('UA: ' + navigator.userAgent.slice(0, 60));
+
+    // WebGL 可用性
+    try {
+        var t = document.createElement('canvas');
+        var gl = t.getContext('webgl') || t.getContext('experimental-webgl');
+        dbgLine('WebGL: ' + (gl ? '可用 ✅' : '不可用 ❌'));
+    } catch (e) {
+        dbgLine('WebGL 检查异常: ' + e.message);
+    }
+
+    dbgLine('pixi 版本: ' + (window.PIXI ? PIXI.VERSION : '未加载 ❌'));
+    dbgLine('live2d-display: ' +
+            (window.PIXI && PIXI.live2d && PIXI.live2d.Live2DModel ? '已加载 ✅' : '未加载 ❌'));
+    dbgLine('cubism core: ' + (window.Live2DCubismCore ? '已加载 ✅' : '未加载 ❌'));
+    dbgLine('目标模型: ' + MODEL);
+
+    // 显式测试模型文件能否拉取
+    try {
+        fetch(MODEL).then(function (r) {
+            dbgLine('fetch 模型 -> HTTP ' + r.status);
+            return r.text().then(function (txt) {
+                dbgLine('model3.json 字节数: ' + txt.length +
+                        (txt.indexOf('FileReferences') >= 0 ? '（格式正确）' : '（格式异常!）'));
+            });
+        }).catch(function (e) {
+            dbgLine('fetch 模型失败 ❌: ' + e.message);
+        });
+    } catch (e) {
+        dbgLine('fetch 调用异常: ' + e.message);
     }
 
     function fit() {
         if (!model || !app) return;
         try {
-            var w = window.innerWidth;
-            var h = window.innerHeight;
+            var w = Math.max(document.documentElement.clientWidth, window.innerWidth) || 1;
+            var h = Math.max(document.documentElement.clientHeight, window.innerHeight) || 1;
             app.renderer.resize(w, h);
             var mw = (model.internalModel && model.internalModel.width) || 1024;
             var mh = (model.internalModel && model.internalModel.height) || 1024;
@@ -37,7 +81,9 @@
             model.x = w / 2;
             model.y = h;
             model.anchor.set(0.5, 1.0);
-        } catch (e) { reportError('fit: ' + e.message); }
+            dbgLine('适配: 模型 ' + mw + 'x' + mh + ' scale=' + s.toFixed(3) +
+                    ' 位置(' + model.x.toFixed(0) + ',' + model.y.toFixed(0) + ')');
+        } catch (e) { reportError('fit 异常: ' + e.message); }
     }
 
     function safe(fn) {
@@ -52,14 +98,6 @@
         bubbleTimer = setTimeout(function () { bubbleEl.style.display = 'none'; }, ms || 4000);
     }
 
-    function showFail() {
-        failed = true;
-        if (bubbleEl) {
-            bubbleEl.textContent = '😢 模型加载失败，请检查网络或模型地址';
-            bubbleEl.style.display = 'block';
-        }
-    }
-
     async function boot() {
         try {
             app = new PIXI.Application({
@@ -70,34 +108,42 @@
                 autoDensity: true,
                 resolution: window.devicePixelRatio || 1
             });
+            dbgLine('PIXI 应用已创建（renderer: ' + (app.renderer.type === PIXI.RENDERER_TYPE.WEBGL ? 'WebGL' : 'Canvas') + '）');
             if (!PIXI.live2d || !PIXI.live2d.Live2DModel) {
                 reportError('pixi-live2d-display 未加载');
-                showFail();
                 return;
             }
             if (PIXI.live2d.Live2DModel.registerTicker) {
                 PIXI.live2d.Live2DModel.registerTicker(PIXI.Ticker);
+                dbgLine('ticker 已注册');
             }
+            dbgLine('开始加载模型: ' + MODEL);
             model = await PIXI.live2d.Live2DModel.from(MODEL, { autoInteract: false });
+            dbgLine('模型加载成功 ✅');
             app.stage.addChild(model);
             fit();
+            // 视口尺寸可能晚于模型就绪，前 10 秒持续校准
+            var n = 0;
+            var fitTimer = setInterval(function () {
+                if (++n > 20) { clearInterval(fitTimer); return; }
+                fit();
+            }, 500);
             window.addEventListener('resize', fit);
             ready = true;
-            log('模型加载完成: ' + MODEL);
+            dbgLine('灵汐 Live2D 就绪 ✅');
             if (window.LingxiNative && window.LingxiNative.onReady) {
                 safe(function () { window.LingxiNative.onReady(); });
             }
             scheduleIdle();
         } catch (e) {
             reportError('Live2D 启动失败: ' + (e && e.message));
-            // 自定义模型加载失败时回退到内置模型
             if (MODEL !== 'Haru/Haru.model3.json') {
+                dbgLine('回退到内置模型…');
                 MODEL = 'Haru/Haru.model3.json';
-                log('回退到内置模型');
                 try { if (app) { app.destroy(true); app = null; model = null; } } catch (e2) {}
                 boot();
             } else {
-                showFail();
+                showBubble('😢 模型加载失败，详见上方诊断', 60000);
             }
         }
     }

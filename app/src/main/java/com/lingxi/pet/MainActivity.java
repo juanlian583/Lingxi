@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
 
     private FrameLayout previewContainer;
     private PetHost previewHost;
-    private Switch swOverlay, swTts, swAuto;
+    private Switch swOverlay, swTts, swAuto, swDebug;
     private EditText etChat, etBase, etKey, etModel, etPrompt, etSprite, etModelUrl;
     private TextView tvChatReply, tvSpriteStatus, tvPetInfo, tvSizeLabel;
     private SeekBar seekSize;
@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
         swOverlay = findViewById(R.id.sw_overlay);
         swTts = findViewById(R.id.sw_tts);
         swAuto = findViewById(R.id.sw_autostart);
+        swDebug = findViewById(R.id.sw_debug);
         etChat = findViewById(R.id.et_chat);
         tvChatReply = findViewById(R.id.tv_chat_reply);
         etBase = findViewById(R.id.et_api_base);
@@ -80,6 +81,7 @@ public class MainActivity extends Activity {
         swOverlay.setChecked(PetConfig.overlayEnabled(this));
         swTts.setChecked(PetConfig.ttsEnabled(this));
         swAuto.setChecked(PetConfig.autostart(this));
+        swDebug.setChecked(PetConfig.debugHitbox(this));
         etBase.setText(PetConfig.apiBase(this));
         etKey.setText(PetConfig.apiKey(this));
         etModel.setText(PetConfig.model(this));
@@ -200,6 +202,12 @@ public class MainActivity extends Activity {
 
         swTts.setOnCheckedChangeListener((v, on) -> PetConfig.setTtsEnabled(this, on));
         swAuto.setOnCheckedChangeListener((v, on) -> PetConfig.setAutostart(this, on));
+
+        swDebug.setOnCheckedChangeListener((v, on) -> {
+            PetConfig.setDebugHitbox(this, on);
+            buildPreview();
+            restartPetService();
+        });
 
         seekSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {

@@ -452,6 +452,27 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
             </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="显示碰撞箱（调试）"
+                    android:textColor="#2B3250"
+                    android:textSize="13sp" />
+
+                <Switch
+                    android:id="@+id/sw_debug"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView
@@ -459,7 +480,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:gravity="center"
-            android:text="灵汐 v1.5 · 非官方 DeepSeek 二创桌宠\n形象素材来自 codex-pet-DeepSeek-girl 开源同人项目"
+            android:text="灵汐 v1.7 · 非官方 DeepSeek 二创桌宠\n形象素材来自 codex-pet-DeepSeek-girl 开源同人项目"
             android:textColor="#B8C2DC"
             android:textSize="11sp" />
     </LinearLayout>

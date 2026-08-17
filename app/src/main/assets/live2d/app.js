@@ -6,6 +6,7 @@
 
     var params = new URLSearchParams(location.search);
     var MODEL = params.get('model') || 'Haru/Haru.model3.json';
+    var debugHitbox = params.get('debug') === '1';
 
     var app = null, model = null, ready = false;
     var canvas = document.getElementById('canvas');
@@ -246,6 +247,42 @@
         returnTimer = setTimeout(function () { returnToIdle(); }, delayMs || 3500);
     }
 
+    /* ---------- 碰撞箱调试：绿色=角色包围盒，红色=窗口触控区域 ---------- */
+    var hitboxG = null;
+
+    function ensureHitbox() {
+        if (hitboxG || !app) return;
+        try {
+            if (!PIXI.Graphics) return;
+            hitboxG = new PIXI.Graphics();
+            app.stage.addChild(hitboxG);
+            drawHitbox();
+        } catch (e) {}
+    }
+
+    function drawHitbox() {
+        try {
+            if (!hitboxG || !app) return;
+            hitboxG.clear();
+            if (!debugHitbox) return;
+            var w = Math.max(document.documentElement.clientWidth, window.innerWidth) || 170;
+            var h = Math.max(document.documentElement.clientHeight, window.innerHeight) || 184;
+            hitboxG.lineStyle(2, 0xff4444, 0.9);
+            hitboxG.drawRect(1, 1, w - 2, h - 2);
+            if (model) {
+                var mw = (model.internalModel && model.internalModel.width) || 1024;
+                var mh = (model.internalModel && model.internalModel.height) || 1024;
+                var s = (model.scale && model.scale.x) || 0.1;
+                var px = model.x - (mw * s) / 2;
+                var py = model.y - (mh * s);
+                hitboxG.lineStyle(2, 0x00ff66, 0.9);
+                hitboxG.drawRect(px, py, mw * s, mh * s);
+                dbgLine('碰撞箱: 角色 ' + Math.round(mw * s) + 'x' + Math.round(mh * s)
+                        + ' @(' + Math.round(px) + ',' + Math.round(py) + ') 窗口 ' + w + 'x' + h);
+            }
+        } catch (e) { reportError('碰撞箱: ' + e.message); }
+    }
+
     // ---------- 加载与适配 ----------
 
     function fit() {
@@ -265,6 +302,8 @@
                 window.__lastScale = s.toFixed(3);
                 dbgLine('适配: 模型 ' + mw + 'x' + mh + ' scale=' + s.toFixed(3));
             }
+            ensureHitbox();
+            drawHitbox();
         } catch (e) { reportError('fit 异常: ' + e.message); }
     }
 
@@ -342,6 +381,13 @@
 
     /* 暴露给原生的 API */
     window.Lingxi = {
+        /* 碰撞箱调试开关 */
+        setDebug: function (on) {
+            debugHitbox = !!on;
+            ensureHitbox();
+            drawHitbox();
+            dbgLine('碰撞箱显示: ' + (debugHitbox ? '开' : '关'));
+        },
         /* 拖拽中暂停渲染器，减少重绘、窗口移动更流畅 */
         setDragging: function (d) {
             try {

@@ -165,6 +165,7 @@ public final class LingxiDiagnostics {
         sb.append("AI: ").append(PetConfig.apiBase(c)).append(" / ").append(PetConfig.model(c))
                 .append(" / Key: ").append(PetConfig.apiKey(c).isEmpty() ? "未配置" : "已配置(隐藏)").append('\n');
         sb.append("悬浮窗服务: ").append(PetService.running ? "运行中" : "未运行").append('\n');
+        sb.append("碰撞箱调试: ").append(PetConfig.debugHitbox(c) ? "开" : "关").append('\n');
         sb.append("----- 本次会话日志 -----\n");
         sb.append(getLog().isEmpty() ? "(暂无日志)" : getLog());
         String prev = getPreviousSessionTail();

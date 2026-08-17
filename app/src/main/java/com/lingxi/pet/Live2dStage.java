@@ -126,6 +126,7 @@ public class Live2dStage extends BaseOverlay implements PetHost {
         String custom = customModelUrl();
         String modelPath = (custom != null) ? Uri.encode(custom) : builtinModelPath();
         String url = base + "?model=" + modelPath;
+        if (PetConfig.debugHitbox(getContext())) url += "&debug=1";
         webView.loadUrl(url);
     }
 

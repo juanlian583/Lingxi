@@ -43,7 +43,12 @@ global.PIXI = {
     constructor(){ this.renderer = { type: 1, resize(){} }; this.stage = { addChild(){} };
       this.ticker = { add(fn){ global.__tick = fn; }, remove(){}, stop(){}, start(){} }; }
   },
-  live2d: { Live2DModel: { registerTicker(){}, from: async () => mockModel } }
+  live2d: { Live2DModel: { registerTicker(){}, from: async () => mockModel } },
+  Graphics: class {
+    constructor(){ this.x = 0; this.y = 0; }
+    clear(){ return this; } lineStyle(){ return this; }
+    drawRect(){ return this; }
+  }
 };
 
 let failed = false;

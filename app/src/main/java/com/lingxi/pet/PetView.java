@@ -20,6 +20,8 @@ public class PetView extends View {
     protected PetAnimator animator;
     protected Bitmap sheet;
     private final Rect petRect = new Rect();
+    private final android.graphics.Paint debugPaint = new android.graphics.Paint(
+            android.graphics.Paint.ANTI_ALIAS_FLAG);
 
     public PetView(Context c) {
         super(c);
@@ -44,5 +46,14 @@ public class PetView extends View {
         int top = h - ph;
         petRect.set(left, top, left + pw, top + ph);
         animator.draw(c, petRect);
+        if (PetConfig.debugHitbox(getContext())) {
+            float d = getResources().getDisplayMetrics().density;
+            debugPaint.setStyle(android.graphics.Paint.Style.STROKE);
+            debugPaint.setStrokeWidth(2 * d);
+            debugPaint.setColor(0xFF00FF66);
+            c.drawRect(petRect, debugPaint);
+            debugPaint.setColor(0xFFFF4444);
+            c.drawRect(0, 0, getWidth(), getHeight(), debugPaint);
+        }
     }
 }

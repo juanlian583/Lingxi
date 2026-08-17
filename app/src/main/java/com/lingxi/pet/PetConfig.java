@@ -41,6 +41,11 @@ public final class PetConfig {
     public static boolean autostart(Context c) { return sp(c).getBoolean("autostart", true); }
     public static void setAutostart(Context c, boolean v) { sp(c).edit().putBoolean("autostart", v).apply(); }
 
+    // ---- 调试 ----
+    /** 显示碰撞箱（角色包围盒 + 触控区域边框） */
+    public static boolean debugHitbox(Context c) { return sp(c).getBoolean("debug_hitbox", false); }
+    public static void setDebugHitbox(Context c, boolean v) { sp(c).edit().putBoolean("debug_hitbox", v).apply(); }
+
     // ---- AI ----
     public static String apiBase(Context c) { return sp(c).getString("api_base", DEFAULT_API_BASE); }
     public static void setApiBase(Context c, String v) { sp(c).edit().putString("api_base", v).apply(); }

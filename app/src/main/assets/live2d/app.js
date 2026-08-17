@@ -109,10 +109,27 @@
     var exprResetTimer = null;
     var activeExprParams = null;
 
+    /* 恢复当前激活表情的直接参数（切换表情前先清掉旧的，防残留/重叠） */
+    function revertActiveExpression() {
+        if (exprResetTimer) { clearTimeout(exprResetTimer); exprResetTimer = null; }
+        var l = activeExprParams;
+        activeExprParams = null;
+        if (l && l.length) {
+            l.forEach(function (e) {
+                animParam(e.id, getParamValue(e.id, e.initial), e.initial, 200);
+            });
+        }
+    }
+
     function applyExpression(nameLike, holdMs) {
         if (!model) return;
         var defs = getExpressionDefs();
         var file = findExpressionFile(nameLike, defs);
+        // 0) 应用新表情前，先复位上一个表情（库混合 + 直接参数），防止表情重叠/残留
+        try {
+            if (defs && defs.length) model.internalModel.motionManager.expressionManager.resetExpression();
+        } catch (e) {}
+        revertActiveExpression();
         // 1) 库 API 应用表情（混合效果可见）
         if (defs && defs.length) {
             for (var i = 0; i < defs.length; i++) {
@@ -136,7 +153,8 @@
                         return p.Id && p.Value !== undefined;
                     });
                     if (!params.length) return;
-                    if (exprResetTimer) clearTimeout(exprResetTimer);
+                    // 连按场景：新表情应用前再次清掉上一个的直接参数
+                    revertActiveExpression();
                     var list = [];
                     params.forEach(function (p) {
                         var init = getParamValue(p.Id, 0);

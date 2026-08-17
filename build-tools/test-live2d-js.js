@@ -18,7 +18,13 @@ global.document = { getElementById: () => el, addEventListener(){},
   documentElement: { clientWidth: 170, clientHeight: 184 } };
 global.URLSearchParams = class { constructor(){ } get(){ return null; } };
 global.Live2DCubismCore = {};
-global.fetch = async () => ({ json: async () => ({ Parameters: [{ Id: 'Param40', Value: -1 }] }) });
+global.fetch = async (url) => {
+  const u = String(url);
+  const params = u.indexOf('quanquan') >= 0 ? [{ Id: 'Param39', Value: 1 }]
+    : u.indexOf('tears') >= 0 ? [{ Id: 'Param17', Value: 1 }, { Id: 'ParamCheek', Value: 1 }]
+    : [{ Id: 'Param40', Value: -1 }];
+  return { json: async () => ({ Parameters: params }) };
+};
 const events = [];
 const mockModel = {
   internalModel: {
@@ -26,7 +32,8 @@ const mockModel = {
     motionManager: {
       definitions: [],
       expressionManager: {
-        definitions: [{ Name: 'eyeclose', File: 'eyeclose.exp3.json' }],
+        definitions: [{ Name: 'eyeclose', File: 'eyeclose.exp3.json' },
+                      { Name: 'quanquan', File: 'quanquan.exp3.json' }],
         resetExpression(){ events.push('resetExpression'); }
       }
     },
@@ -66,17 +73,19 @@ setTimeout(() => {
   try {
     // 验证模型已就绪
     if (!global.Lingxi || !global.ready) { /* ready 是闭包变量，这里通过行为验证 */ }
+    // 模拟快速连按：单击(quanquan)后立刻摸头(eyeclose)，验证表情切换不重叠不残留
+    global.Lingxi.randomMotion();
     global.Lingxi.pat();
-    console.log('✓ pat() 调用无异常');
+    console.log('✓ 连按 randomMotion+pat 无异常');
     setTimeout(() => {
-      // 等 fetch 微任务完成后驱动 ticker，让表情参数 tween 推进到目标值
-      if (global.__tick) { for (let i = 0; i < 40; i++) global.__tick(); }
-      const okApply = events.includes('expression:eyeclose');
+      // 等 fetch 微任务完成后驱动 ticker，让 tween 推进
+      if (global.__tick) { for (let i = 0; i < 60; i++) global.__tick(); }
+      const okSwitch = events.includes('expression:quanquan') && events.includes('expression:eyeclose');
       const okParam = events.includes('setParam:Param40=-1');
       const okReset = events.includes('resetExpression');
-      okApply ? console.log('✓ 库 API 表情应用') : fail('表情库 API 应用缺失');
-      okParam ? console.log('✓ 直接参数应用') : fail('表情参数应用缺失');
-      okReset ? console.log('✓ 库级表情恢复') : fail('表情恢复缺失');
+      okSwitch ? console.log('✓ 表情切换（quanquan→eyeclose）') : fail('表情切换缺失');
+      okParam ? console.log('✓ 新表情参数应用') : fail('表情参数应用缺失');
+      okReset ? console.log('✓ 库级表情复位') : fail('表情恢复缺失');
       if (failed) process.exit(1);
       console.log('✅ Live2D JS 回归测试全部通过');
       process.exit(0);
